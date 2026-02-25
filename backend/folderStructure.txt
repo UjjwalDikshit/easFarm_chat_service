@@ -1,0 +1,17 @@
+chat-service/
+│
+├── src/
+│   ├── controllers/
+│   ├── models/
+│   ├── routes/
+│   ├── sockets/
+│   │     ├── index.js
+│   │     ├── group.socket.js
+│   │     ├── presence.socket.js
+│   │
+│   ├── middlewares/
+│   ├── utils/
+│   └── server.js
+│
+├── package.json
+└── .env
