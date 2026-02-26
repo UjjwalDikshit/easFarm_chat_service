@@ -1,32 +1,23 @@
 const mongoose = require("mongoose");
 
-const reactionSchema = new mongoose.Schema(
-  {
-    userId: mongoose.Schema.Types.ObjectId,
-    emoji: String
-  },
-  { _id: false }
-);
-
 const messageSchema = new mongoose.Schema(
   {
-    groupId: {
+    conversationId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Group",
       required: true,
-      index: true
+      index: true,
     },
 
     senderId: {
       type: mongoose.Schema.Types.ObjectId,
       required: true,
-      index: true
+      index: true,
     },
 
     type: {
       type: String,
       enum: ["text", "image", "video", "document", "voice", "system"],
-      default: "text"
+      default: "text",
     },
 
     content: {
@@ -34,48 +25,46 @@ const messageSchema = new mongoose.Schema(
       mediaUrl: String,
       thumbnailUrl: String,
       fileSize: Number,
-      duration: Number
+      duration: Number,
     },
 
     replyTo: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Message"
+      ref: "Message",
     },
 
-    reactions: [reactionSchema],
-
-    deliveredTo: [
+    reactions: [
       {
-        type: mongoose.Schema.Types.ObjectId
-      }
+        userId: mongoose.Schema.Types.ObjectId,
+        emoji: String,
+      },
     ],
 
-    readBy: [
-      {
-        type: mongoose.Schema.Types.ObjectId
-      }
-    ],
+    deliveredTo: [mongoose.Schema.Types.ObjectId],
+    readBy: [mongoose.Schema.Types.ObjectId],
 
     edited: {
       type: Boolean,
-      default: false
+      default: false,
     },
 
-    deletedFor: [
-      {
-        type: mongoose.Schema.Types.ObjectId
-      }
-    ],
+    deletedForUsers: [mongoose.Schema.Types.ObjectId],
 
-    isDeletedForEveryone: {
+    deletedGlobally: {
       type: Boolean,
-      default: false
-    }
+      default: false,
+    },
+    groupId: {
+      type: mongoose.Schema.Types.ObjectId,
+      index: true,
+    },
+    deletedBy: mongoose.Schema.Types.ObjectId,
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
-messageSchema.index({ groupId: 1, createdAt: -1 });
-messageSchema.index({ senderId: 1 });
+messageSchema.index({ conversationId: 1, createdAt: -1 });
+messageSchema.index({ conversationId: 1, readBy: 1 });
+messageSchema.index({ groupId: 1, readBy: 1 });
 
 module.exports = mongoose.model("Message", messageSchema);

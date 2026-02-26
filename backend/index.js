@@ -1,22 +1,26 @@
 const express = require('express');
 const cors = require('cors');
+const cookieParser = require('cookie-parser');
 require("dotenv").config();
 const mongoose = require("mongoose");
 
+const http = require('http');
 const MongoDBConnect = require('./src/config/mongoDB');
+const initSocket = require('./src/config/socket');
 
 const app = express();
+const server = http.createServer(app);
 
-// Middlewares
 app.use(express.json());
+app.use(cookieParser());
 app.use(cors());
 
-// Start Application
 async function appStart() {
     try {
         await MongoDBConnect(); // wait for DB connection
+        initSocket(server);
 
-        app.listen(process.env.PORT, () => {
+        server.listen(process.env.PORT, () => {
             console.log(`Server is running on port ${process.env.PORT}`);
         });
 

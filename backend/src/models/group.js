@@ -10,13 +10,18 @@ const memberSchema = new mongoose.Schema(
 
     role: {
       type: String,
-      enum: ["member", "admin"],
+      enum: ["member", "admin", "superadmin"],
       default: "member"
     },
 
     joinedAt: {
       type: Date,
       default: Date.now
+    },
+
+    isRemoved: {
+      type: Boolean,
+      default: false
     }
   },
   { _id: false }
@@ -30,8 +35,12 @@ const groupSchema = new mongoose.Schema(
       trim: true
     },
 
-    description: {
-      type: String
+    description: String,
+
+    groupType: {
+      type: String,
+      enum: ["free", "premium"],
+      default: "free"
     },
 
     settings: {
@@ -41,28 +50,24 @@ const groupSchema = new mongoose.Schema(
       },
 
       roleLimits: {
-        admin: {
-          type: Number,
-          default: 1
-        },
-
-        moderator: {
-          type: Number,
-          default: 0
-        }
+        admin: { type: Number, default: 5 },
+        superadmin: { type: Number, default: 1 }
       }
     },
 
     members: [memberSchema],
+
+    memberCount: {
+      type: Number,
+      default: 1
+    },
 
     isBanned: {
       type: Boolean,
       default: false
     },
 
-    bannedBy: {
-      type: mongoose.Schema.Types.ObjectId
-    },
+    bannedBy: mongoose.Schema.Types.ObjectId,
 
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,

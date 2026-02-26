@@ -21,13 +21,9 @@ const inviteSchema = new mongoose.Schema(
       required: true
     },
 
-    expiresAt: {
-      type: Date
-    },
+    expiresAt: Date,
 
-    maxUses: {
-      type: Number
-    },
+    maxUses: Number,
 
     currentUses: {
       type: Number,
@@ -39,10 +35,7 @@ const inviteSchema = new mongoose.Schema(
       default: true
     },
 
-    createdBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      required: true
-    }
+    createdBy: mongoose.Schema.Types.ObjectId
   },
   { timestamps: true }
 );

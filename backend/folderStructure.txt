@@ -15,3 +15,39 @@ chat-service/
 │
 ├── package.json
 └── .env
+
+easFarm_chat_service/
+│
+├── src/
+│   ├── config/
+│   │   ├── mongoDB.js
+│   │   └── socket.js
+│   │
+│   ├── models/
+│   │   ├── User.js
+│   │   ├── Group.js
+│   │   ├── Message.js
+│   │   └── InviteLink.js
+│   │
+│   ├── sockets/
+│   │   ├── index.js              // socket entry
+│   │   ├── connection.js         // connection lifecycle
+│   │   ├── events/
+│   │   │   ├── message.events.js
+│   │   │   ├── group.events.js
+│   │   │   ├── presence.events.js
+│   │   │   └── typing.events.js
+│   │   │
+│   │   └── middlewares/
+│   │       └── auth.socket.js
+│   │
+│   ├── services/
+│   │   ├── message.service.js
+│   │   ├── group.service.js
+│   │   └── presence.service.js
+│   │
+│   ├── routes/
+│   └── controllers/
+│
+├── server.js
+└── .env

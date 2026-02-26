@@ -5,8 +5,13 @@ const userSchema = new mongoose.Schema(
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       required: true,
-      index: true,
-      unique: true // one chat profile per main user
+      unique: true,
+      index: true
+    },
+
+    uniqueId: {
+      type: String,
+      unique: true
     },
 
     isOnline: {
@@ -14,25 +19,25 @@ const userSchema = new mongoose.Schema(
       default: false
     },
 
-    lastSeen: {
-      type: Date
-    },
+    lastSeen: Date,
 
-    socketId: {
-      type: String // for realtime tracking
-    },
+    socketId: String,
 
-    mutedGroups: [
+    mutedConversations: [
       {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Group"
+        type: mongoose.Schema.Types.ObjectId
       }
     ],
 
-    archivedChats: [
+    archivedConversations: [
       {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Group"
+        type: mongoose.Schema.Types.ObjectId
+      }
+    ],
+
+    blockedUsers: [
+      {
+        type: mongoose.Schema.Types.ObjectId
       }
     ]
   },
