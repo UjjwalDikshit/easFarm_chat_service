@@ -1,34 +1,53 @@
-const removeOnlineUser = function (onlineUsers) {
-  const userId = socket.userId;
+/*
+==================================================
+REMOVE ONLINE USER
+==================================================
+*/
+const removeOnlineUser = function (io, socket, onlineUsers) {
 
+  const userId = socket.user?._id?.toString();
   if (!userId) return;
 
   const userSockets = onlineUsers.get(userId);
 
   if (userSockets) {
+
     userSockets.delete(socket.id);
 
-    // If no more active sockets → user is truly offline
+    // If no more active sockets → fully offline
     if (userSockets.size === 0) {
+
       onlineUsers.delete(userId);
 
-      socket.broadcast.emit("user_offline", userId);
+      io.emit("user_offline", userId);
 
       console.log(`User ${userId} is offline`);
     }
   }
 };
 
-const removeTypingUser = function (typingUsers) {
+
+/*
+==================================================
+REMOVE TYPING USER
+==================================================
+*/
+const removeTypingUser = function (io, socket, typingUsers) {
+
+  const userId = socket.user?._id?.toString();
+  if (!userId) return;
+
   for (const [key, timeout] of typingUsers.entries()) {
-    if (key.endsWith(`_${socket.userId}`)) {
+
+    if (key.endsWith(`_${userId}`)) {
+
       clearTimeout(timeout);
 
-      const [groupId] = key.split("_");
+      const roomId = key.split("_")[0];
 
-      socket.to(groupId).emit("typing:stop", {
-        groupId,
-        userId: socket.userId,
+      socket.to(roomId).emit("typing:stop", {
+        roomId,
+        userId
       });
 
       typingUsers.delete(key);
@@ -36,4 +55,7 @@ const removeTypingUser = function (typingUsers) {
   }
 };
 
-module.exports = {removeOnlineUser,removeTypingUser};
+module.exports = {
+  removeOnlineUser,
+  removeTypingUser
+};

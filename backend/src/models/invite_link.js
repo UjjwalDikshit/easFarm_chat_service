@@ -2,9 +2,9 @@ const mongoose = require("mongoose");
 
 const inviteSchema = new mongoose.Schema(
   {
-    groupId: {
+    conversationId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Group",
+      ref: "Conversation",
       required: true,
       index: true
     },

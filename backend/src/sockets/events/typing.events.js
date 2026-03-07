@@ -1,54 +1,94 @@
+// typingUsers Map should live OUTSIDE the function (global per server)
+const typingUsers = new Map();
+
 module.exports = function (io, socket) {
 
-    socket.on("typing:start", ({ groupId }) => {
+  const userId = socket.user._id.toString();
 
-        if (!groupId || !socket.userId) return;
+  /*
+  ==========================================
+  START TYPING
+  ==========================================
+  */
+  socket.on("typing:start", ({ groupId, conversationId }) => {
 
-        const key = `${groupId}_${socket.userId}`;
+    const roomId = groupId || conversationId;
+    if (!roomId) return;
 
-        // Clear existing timeout if still typing
-        if (typingUsers.has(key)) {
-            clearTimeout(typingUsers.get(key));
-        } else {
-            // Only emit start if not already typing
-            socket.to(groupId).emit("typing:start", {
-                groupId,
-                userId: socket.userId
-            });
-        }
+    const key = `${roomId}_${userId}`;
 
-        // Auto stop after 3 seconds of inactivity
-        const timeout = setTimeout(() => {
+    // If already typing, reset timeout only
+    if (typingUsers.has(key)) {
+      clearTimeout(typingUsers.get(key));
+    } else {
+      // Emit only first time
+      socket.to(roomId).emit("typing:start", {
+        roomId,
+        userId
+      });
+    }
 
-            socket.to(groupId).emit("typing:stop", {
-                groupId,
-                userId: socket.userId
-            });
+    // Auto stop after 3 seconds
+    const timeout = setTimeout(() => {
 
-            typingUsers.delete(key);
+      socket.to(roomId).emit("typing:stop", {
+        roomId,
+        userId
+      });
 
-        }, 3000);
+      typingUsers.delete(key);
 
-        typingUsers.set(key, timeout);
-    });
+    }, 3000);
 
+    typingUsers.set(key, timeout);
+  });
 
-    socket.on("typing:stop", ({ groupId }) => {
+  /*
+  ==========================================
+  STOP TYPING (Manual)
+  ==========================================
+  */
+  socket.on("typing:stop", ({ groupId, conversationId }) => {
 
-        if (!groupId || !socket.userId) return;
+    const roomId = groupId || conversationId;
+    if (!roomId) return;
 
-        const key = `${groupId}_${socket.userId}`;
+    const key = `${roomId}_${userId}`;
 
-        if (typingUsers.has(key)) {
-            clearTimeout(typingUsers.get(key));
-            typingUsers.delete(key);
+    if (typingUsers.has(key)) {
+      clearTimeout(typingUsers.get(key));
+      typingUsers.delete(key);
 
-            socket.to(groupId).emit("typing:stop", {
-                groupId,
-                userId: socket.userId
-            });
-        }
-    });
+      socket.to(roomId).emit("typing:stop", {
+        roomId,
+        userId
+      });
+    }
+  });
 
+  /*
+  ==========================================
+  CLEANUP ON DISCONNECT
+  ==========================================
+  */
+  socket.on("disconnect", () => {
+
+    for (const [key, timeout] of typingUsers.entries()) {
+
+      if (key.endsWith(`_${userId}`)) {
+
+        clearTimeout(timeout);
+
+        const roomId = key.split("_")[0];
+
+        socket.to(roomId).emit("typing:stop", {
+          roomId,
+          userId
+        });
+
+        typingUsers.delete(key);
+      }
+    }
+  });
 
 };

@@ -1,4 +1,4 @@
-const Group = require("../../models/group");
+const Group = require("../../models/conversation");
 
 module.exports = function (io, socket) {
   socket.on("join_group", async (groupId, callback) => {
@@ -17,7 +17,8 @@ module.exports = function (io, socket) {
 
       // Check if user is a member
       const isMember = group.members.some(
-        (memberId) => memberId.toString() === socket.userId,
+        (member) =>
+          member.userId.toString() === socket.userId && !member.isRemoved,
       );
 
       if (!isMember) {
@@ -45,6 +46,50 @@ module.exports = function (io, socket) {
     } catch (error) {
       console.error("Join group error:", error);
       callback?.({ error: "Failed to join group" });
+    }
+  });
+
+  socket.on("group:leave", async ({ groupId }, cb) => {
+    try {
+      const group = await Group.findById(groupId);
+
+      if (!group) {
+        return cb?.({ error: "Group not found" });
+      }
+
+      const memberIndex = group.members.findIndex(
+        (m) => m.userId.toString() === socket.user._id.toString(),
+      );
+
+      if (memberIndex === -1) {
+        return cb?.({ error: "You are not a member of this group" });
+      }
+
+      // prevent superadmin leaving without transfer
+      if (group.members[memberIndex].role === "superadmin") {
+        return cb?.({
+          error: "Superadmin cannot leave without transferring ownership",
+        });
+      }
+
+      // remove member
+      group.members.splice(memberIndex, 1);
+      group.memberCount = group.members.length;
+
+      await group.save();
+
+      // remove from socket room
+      socket.leave(groupId);
+
+      // notify others
+      socket.to(groupId).emit("group:userLeft", {
+        groupId,
+        userId: socket.user._id,
+      });
+
+      cb?.({ success: true });
+    } catch (err) {
+      cb?.({ error: err.message });
     }
   });
 };

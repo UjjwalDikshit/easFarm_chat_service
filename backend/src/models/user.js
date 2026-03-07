@@ -2,46 +2,31 @@ const mongoose = require("mongoose");
 
 const userSchema = new mongoose.Schema(
   {
-    userId: {
-      type: mongoose.Schema.Types.ObjectId,
-      required: true,
-      unique: true,
-      index: true
-    },
-
     uniqueId: {
       type: String,
-      unique: true
+      unique: true,
+      required: true,
+      index: true,
+    },
+    user_id:{
+      type:String,
+      unique:true,
+      required:true,
+      index:true
+    },
+    lastSeen: {
+      type: Date,
     },
 
-    isOnline: {
-      type: Boolean,
-      default: false
-    },
-
-    lastSeen: Date,
-
-    socketId: String,
-
-    mutedConversations: [
-      {
-        type: mongoose.Schema.Types.ObjectId
-      }
-    ],
-
-    archivedConversations: [
-      {
-        type: mongoose.Schema.Types.ObjectId
-      }
-    ],
-
-    blockedUsers: [
-      {
-        type: mongoose.Schema.Types.ObjectId
-      }
-    ]
+    // Optional profile fields
+    name: String,
+    avatar: String,
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+    versionKey: false,
+  }
 );
 
-module.exports = mongoose.model("ChatUser", userSchema);
+// module.exports = mongoose.model("ChatUser", userSchema);
+module.exports = mongoose.models.ChatUser || mongoose.model('ChatUser', userSchema);

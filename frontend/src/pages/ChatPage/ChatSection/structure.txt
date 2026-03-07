@@ -1,0 +1,11 @@
+ChatPage
+ ├── Sidebar
+ │     ├── SearchBar
+ │     ├── ConversationList
+ │     │     └── ConversationItem
+ │
+ └── ChatSection
+       ├── ChatHeader
+       ├── MessageList
+       │     └── MessageBubble
+       └── MessageInput

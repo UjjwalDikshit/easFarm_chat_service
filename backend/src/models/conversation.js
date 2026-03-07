@@ -4,44 +4,128 @@ const conversationSchema = new mongoose.Schema(
   {
     type: {
       type: String,
-      enum: ["private"],
-      required: true
+      enum: ["private", "free-group", "private-group"],
+      required: true,
+      index: true,
     },
 
-    participants: [
-      {
-        userId: {
-          type: mongoose.Schema.Types.ObjectId,
-          required: true,
-          index: true
-        }
-      }
-    ],
-
-    lastMessage: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Message"
+    // Only for groups
+    name: {
+      type: String,
+      trim: true,
     },
 
-    isBlocked: {
-      type: Boolean,
-      default: false
+    description: {
+      type: String,
+      trim: true,
     },
-
-    blockedBy: mongoose.Schema.Types.ObjectId,
 
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
-      required: true
-    }
+      ref: "ChatUser",
+      required: true,
+    },
+
+    // For fast chat list sorting
+    lastMessageId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Message",
+    },
+
+    lastMessageAt: {
+      type: Date,
+      index: true,
+    },
+
+    // Deterministic key for private chat (prevents duplicate)
+    privateKey: {
+      type: String,
+      unique: true,
+      sparse: true,
+    },
+
+    // Blocking (private only)
+    isBlocked: {
+      type: Boolean,
+      default: false,
+    },
+    idDeleted:{
+      type:Boolean,
+      default:false,
+    },
+    blockedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "ChatUser",
+    },
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+    versionKey: false,
+  },
 );
 
-// prevent duplicate private chat between same 2 users
+// 🔥 Fast sorting for chat list
+conversationSchema.index({ lastMessageAt: -1 });
+
+// 🔥 Prevent duplicate private chats
 conversationSchema.index(
-  { "participants.userId": 1 },
-  { unique: false }
+  { type: 1, privateKey: 1 },
+  { unique: true, sparse: true },
 );
 
-module.exports = mongoose.model("Conversation", conversationSchema);
+const conversation = mongoose.model("Conversation", conversationSchema);
+
+const conversationMemberSchema = new mongoose.Schema(
+  {
+    conversationId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Conversation",
+      required: true,
+    },
+
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "ChatUser",
+      required: true,
+    },
+
+    role: {
+      type: String,
+      enum: ["member", "admin"],
+      default: "member",
+    },
+
+    lastReadMessageId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Message",
+    },
+
+    unreadCount: {
+      type: Number,
+      default: 0,
+    },
+
+    joinedAt: {
+      type: Date,
+      default: Date.now,
+    },
+  },
+  {
+    versionKey: false,
+  },
+);
+
+// 🔥 Ensure one membership per user per conversation
+conversationMemberSchema.index(
+  { conversationId: 1, userId: 1 },
+  { unique: true },
+);
+
+// 🔥 Get all conversations of a user quickly
+conversationMemberSchema.index({ userId: 1 });
+
+const conversationMember = mongoose.model(
+  "ConversationMember",
+  conversationMemberSchema,
+);
+module.exports = { conversation, conversationMember };

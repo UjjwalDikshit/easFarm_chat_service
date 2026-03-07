@@ -1,132 +1,136 @@
 const Message = require("../../models/message");
 const Conversation = require("../../models/conversation");
-const Group = require("../../models/group");
+const Group = require("../../models/conversation");
 
 module.exports = function registerReadReceiptEvents(io, socket) {
 
-    socket.on("read", async (data, callback) => {
-        try {
+  const readerId = socket.user._id.toString();
 
-            const { type, conversationId, groupId } = data;
-            const readerId = socket.userId;
+  socket.on("read", async (data, callback) => {
+    try {
 
-            if (!type) {
-                return callback?.({ error: "Type is required" });
-            }
+      const { type, conversationId, groupId } = data;
 
-            /* =====================================================
-               1 PRIVATE CONVERSATION READ RECEIPT
-            ===================================================== */
+      if (!type) {
+        return callback?.({ success: false, message: "Type is required" });
+      }
 
-            if (type === "conversation") {
+      /*
+      =====================================================
+      1️⃣ PRIVATE CONVERSATION READ
+      =====================================================
+      */
+      if (type === "conversation") {
 
-                if (!conversationId) {
-                    return callback?.({ error: "conversationId required" });
-                }
-
-                // Validate membership
-                const conversation = await Conversation.findOne({
-                    _id: conversationId,
-                    "participants.userId": readerId
-                });
-
-                if (!conversation) {
-                    return callback?.({ error: "Not part of conversation" });
-                }
-
-                // Find unread messages
-                const unreadMessages = await Message.find({
-                    conversationId,
-                    senderId: { $ne: readerId },
-                    readBy: { $ne: readerId },
-                    deletedGlobally: false
-                }).select("_id senderId");
-
-                if (!unreadMessages.length) {
-                    return callback?.({ success: true, readCount: 0 });
-                }
-
-                const messageIds = unreadMessages.map(m => m._id);
-
-                // Update readBy
-                await Message.updateMany(
-                    { _id: { $in: messageIds } },
-                    { $addToSet: { readBy: readerId } }
-                );
-
-                // Notify other participant
-                unreadMessages.forEach(msg => {
-                    io.to(msg.senderId.toString()).emit("message:read", {
-                        conversationId,
-                        messageId: msg._id,
-                        readerId
-                    });
-                });
-
-                return callback?.({
-                    success: true,
-                    readCount: unreadMessages.length
-                });
-            }
-
-            /* =====================================================
-               2 GROUP READ RECEIPT
-            ===================================================== */
-
-            if (type === "group") {
-
-                if (!groupId) {
-                    return callback?.({ error: "groupId required" });
-                }
-
-                // Validate group membership
-                const group = await Group.findOne({
-                    _id: groupId,
-                    "members.userId": readerId,
-                    "members.isRemoved": false
-                });
-
-                if (!group) {
-                    return callback?.({ error: "Not a group member" });
-                }
-
-                // IMPORTANT: This requires groupId field in Message schema
-                const unreadMessages = await Message.find({
-                    groupId,
-                    senderId: { $ne: readerId },
-                    readBy: { $ne: readerId },
-                    deletedGlobally: false
-                }).select("_id senderId");
-
-                if (!unreadMessages.length) {
-                    return callback?.({ success: true, readCount: 0 });
-                }
-
-                const messageIds = unreadMessages.map(m => m._id);
-
-                await Message.updateMany(
-                    { _id: { $in: messageIds } },
-                    { $addToSet: { readBy: readerId } }
-                );
-
-                // Notify each sender
-                unreadMessages.forEach(msg => {
-                    io.to(msg.senderId.toString()).emit("group:message_read", {
-                        groupId,
-                        messageId: msg._id,
-                        readerId
-                    });
-                });
-
-                return callback?.({
-                    success: true,
-                    readCount: unreadMessages.length
-                });
-            }
-
-        } catch (error) {
-            console.error("Read receipt error:", error);
-            callback?.({ error: "Failed to mark as read" });
+        if (!conversationId) {
+          return callback?.({ success: false, message: "conversationId required" });
         }
-    });
+
+        // Validate membership
+        const exists = await Conversation.exists({
+          _id: conversationId,
+          "participants.userId": readerId
+        });
+
+        if (!exists) {
+          return callback?.({ success: false, message: "Not part of conversation" });
+        }
+
+        // Update unread messages directly
+        const result = await Message.updateMany(
+          {
+            conversationId,
+            senderId: { $ne: readerId },
+            readBy: { $ne: readerId },
+            deletedGlobally: false
+          },
+          {
+            $addToSet: { readBy: readerId }
+          }
+        );
+
+        // Reset unreadCount in Conversation
+        await Conversation.updateOne(
+          {
+            _id: conversationId,
+            "participants.userId": readerId
+          },
+          {
+            $set: { "participants.$.unreadCount": 0 }
+          }
+        );
+
+        // Emit once to room
+        socket.to(conversationId).emit("conversation:read", {
+          conversationId,
+          readerId
+        });
+
+        return callback?.({
+          success: true,
+          readCount: result.modifiedCount
+        });
+      }
+
+      /*
+      =====================================================
+      2️⃣ GROUP READ
+      =====================================================
+      */
+      if (type === "group") {
+
+        if (!groupId) {
+          return callback?.({ success: false, message: "groupId required" });
+        }
+
+        const exists = await Group.exists({
+          _id: groupId,
+          "members.userId": readerId,
+          "members.isRemoved": false
+        });
+
+        if (!exists) {
+          return callback?.({ success: false, message: "Not a group member" });
+        }
+
+        const result = await Message.updateMany(
+          {
+            groupId,
+            senderId: { $ne: readerId },
+            readBy: { $ne: readerId },
+            deletedGlobally: false
+          },
+          {
+            $addToSet: { readBy: readerId }
+          }
+        );
+
+        // Reset unreadCount in Group
+        await Group.updateOne(
+          {
+            _id: groupId,
+            "members.userId": readerId
+          },
+          {
+            $set: { "members.$.unreadCount": 0 }
+          }
+        );
+
+        socket.to(groupId).emit("group:read", {
+          groupId,
+          readerId
+        });
+
+        return callback?.({
+          success: true,
+          readCount: result.modifiedCount
+        });
+      }
+
+    } catch (error) {
+      console.error("Read receipt error:", error);
+      callback?.({ success: false, message: "Failed to mark as read" });
+    }
+  });
+
 };
