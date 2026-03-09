@@ -51,7 +51,7 @@ const authMiddleware = async (req, res, next) => {
     /* ===============================
        FETCH USER FROM DATABASE
     =============================== */
-    const user = await User.findOne({ user_id: decoded._id }).lean()
+    const user = await User.findOne({ user_id: decoded._id }).lean() // chatUser hai
       .select("_id name uniqueId isBanned isDeleted")
       .lean();
 

@@ -36,7 +36,7 @@ module.exports = async (socket, next) => {
       return next(new Error("Authentication error: Invalid token"));
     }
 
-    if (!decoded?.id) {
+    if (!decoded?._id) {
       return next(new Error("Authentication error: Invalid payload"));
     }
 

@@ -4,6 +4,7 @@ const cookieParser = require('cookie-parser');
 require("dotenv").config();
 const mongoose = require("mongoose");
 const create = require('./src/routes/creation')
+const myThing = require('./src/routes/mything');
 
 const http = require('http');
 const MongoDBConnect = require('./src/config/mongoDB');
@@ -24,6 +25,7 @@ app.use(
 );
 
 app.use("/user", create);
+app.use("/mything",myThing);
 
 async function appStart() {
     try {

@@ -25,13 +25,13 @@ module.exports = function (io) {
     // registerPresenceEvents(io, socket, onlineUsers);
     // registerTypingEvents(io, socket, typingUsers);
     // registerReadReceiptEvents(io, socket);
-    // registerConversationEvents(io, socket);
+    registerConversationEvents(io, socket);
     // registerNotificationEvents(io, socket);
 
     socket.on("disconnect", () => {
       // disconnectEvent.removeOnlineUser(socket, onlineUsers);
       // disconnectEvent.removeTypingUser(socket, typingUsers);
-      console.log("User disconnected:", socket.userId);
+      console.log("User disconnected:", socket.chatUserId);
     });
   });
 };

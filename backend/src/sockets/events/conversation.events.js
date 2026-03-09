@@ -1,9 +1,10 @@
-const {conversation:Conversation} = require("../../models/conversation");
+const { conversation: Conversation,conversationMember:ConversationMember } = require("../../models/conversation");
 const mongoose = require("mongoose");
+const user = require("../../models/user");
 
 function registerConversationEvents(io, socket) {
   const userId = socket.user._id.toString();
-
+  const chatUserId = socket.chatUserId;
   /*
   ==========================================
   CREATE OR GET PRIVATE CONVERSATION
@@ -19,26 +20,28 @@ function registerConversationEvents(io, socket) {
         return cb?.({ error: "Cannot create chat with yourself" });
       }
 
-      // create deterministic private key
       const users = [userId, targetUserId].sort();
       const privateKey = users.join("_");
 
-      // atomic upsert prevents duplicates
-      const conversation = await Conversation.findOneAndUpdate(
-        { type: "private", privateKey },
-        {
-          $setOnInsert: {
-            type: "private",
-            privateKey,
-            participants: users.map(id => ({ userId: id })),
-            createdBy: userId
-          }
-        },
-        { new: true, upsert: true }
-      );
+      let conversation = await Conversation.findOne({
+        type: "private",
+        privateKey,
+      });
+
+      if (!conversation) {
+        conversation = await Conversation.create({
+          type: "private",
+          privateKey,
+          createdBy: userId,
+        });
+
+        await ConversationMember.insertMany([
+          { conversationId: conversation._id, userId: users[0] },
+          { conversationId: conversation._id, userId: users[1] },
+        ]);
+      }
 
       cb?.({ success: true, conversation });
-
     } catch (err) {
       cb?.({ error: err.message });
     }
@@ -51,17 +54,23 @@ function registerConversationEvents(io, socket) {
   */
   socket.on("conversation:getAll", async ({ page = 1, limit = 20 }, cb) => {
     try {
-      const conversations = await Conversation.find({
-        "participants.userId": userId
+      const memberships = await ConversationMember.find({
+        userId,
       })
-        .populate("lastMessage")
+        .select("conversationId unreadCount")
+        .lean();
+
+      const conversationIds = memberships.map((m) => m.conversationId);
+
+      const conversations = await Conversation.find({
+        _id: { $in: conversationIds },
+      })
         .sort({ updatedAt: -1 })
         .skip((page - 1) * limit)
         .limit(limit)
         .lean();
 
       cb?.({ success: true, conversations });
-
     } catch (err) {
       cb?.({ error: err.message });
     }
@@ -77,11 +86,12 @@ function registerConversationEvents(io, socket) {
       const convo = await Conversation.findById(conversationId);
       if (!convo) return cb?.({ error: "Conversation not found" });
 
-      const isParticipant = convo.participants.some(
-        p => p.userId.toString() === userId
-      );
+      const membership = await ConversationMember.findOne({
+        conversationId,
+        userId,
+      });
 
-      if (!isParticipant) {
+      if (!membership) {
         return cb?.({ error: "Access denied" });
       }
 
@@ -91,11 +101,10 @@ function registerConversationEvents(io, socket) {
 
       io.to(conversationId).emit("conversation:blocked", {
         conversationId,
-        blockedBy: userId
+        blockedBy: userId,
       });
 
       cb?.({ success: true });
-
     } catch (err) {
       cb?.({ error: err.message });
     }
@@ -111,24 +120,24 @@ function registerConversationEvents(io, socket) {
       const convo = await Conversation.findById(conversationId);
       if (!convo) return cb?.({ error: "Conversation not found" });
 
-      const isParticipant = convo.participants.some(
-        p => p.userId.toString() === userId
-      );
+      const membership = await ConversationMember.findOne({
+        conversationId,
+        userId,
+      });
 
-      if (!isParticipant) {
-        return cb?.({ error: "Access denied" });
-      }
+      if (!membership) return;
+
+      socket.join(conversationId);
 
       convo.isBlocked = false;
       convo.blockedBy = null;
       await convo.save();
 
       io.to(conversationId).emit("conversation:unblocked", {
-        conversationId
+        conversationId,
       });
 
       cb?.({ success: true });
-
     } catch (err) {
       cb?.({ error: err.message });
     }
@@ -139,21 +148,21 @@ function registerConversationEvents(io, socket) {
   JOIN CONVERSATION ROOM (SECURE)
   ==========================================
   */
-  socket.on("conversation:join", async ({ conversationId }) => {
+  socket.on("join_conversation", async ({ conversationId }) => {
     try {
       if (!mongoose.Types.ObjectId.isValid(conversationId)) return;
 
       const convo = await Conversation.findById(conversationId).lean();
       if (!convo) return;
 
-      const isParticipant = convo.participants.some(
-        p => p.userId.toString() === userId
-      );
+      const membership = await ConversationMember.findOne({
+        conversationId,
+        userId: new mongoose.Types.ObjectId(chatUserId),
+      });
 
-      if (!isParticipant) return;
-
+      if (!membership) return;
+      console.log('user has joined ',conversationId);
       socket.join(conversationId);
-
     } catch (err) {
       console.error("Join error:", err);
     }
@@ -164,7 +173,7 @@ function registerConversationEvents(io, socket) {
   LEAVE CONVERSATION ROOM
   ==========================================
   */
-  socket.on("conversation:leave", ({ conversationId }) => {
+  socket.on("leave_conversation", ({ conversationId }) => {
     socket.leave(conversationId);
   });
 }

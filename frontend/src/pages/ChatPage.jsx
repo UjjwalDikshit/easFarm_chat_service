@@ -4,6 +4,7 @@ import { connectSocket, getSocket } from "../socket/socket";
 import { registerSocketEvents } from "../socket/registerEvents";
 import { useDispatch, useSelector } from "react-redux";
 import { addMessage } from "../store/chatSlice";
+import Sidebar from "./ChatPage/Sidebar/ConversationList/Sidebar";
 
 export default function ChatPage() {
   const dispatch = useDispatch();
@@ -13,7 +14,7 @@ export default function ChatPage() {
   const [message, setMessage] = useState("");
 
   const messages = useSelector(
-    (state) => state.chat.messages[selectedConversation] || []
+    (state) => state.chat.messages[selectedConversation] || [],
   );
 
   /* ================= SOCKET SETUP ================= */
@@ -36,10 +37,10 @@ export default function ChatPage() {
     const socket = getSocket();
     if (!socket || !selectedConversation) return;
 
-    socket.emit("join_conversation", selectedConversation);
+    socket.emit("join_conversation", {conversationId:selectedConversation});
 
     return () => {
-      socket.emit("leave_conversation", selectedConversation);
+      socket.emit("leave_conversation", {conversationId:selectedConversation});
     };
   }, [selectedConversation]);
 
@@ -66,8 +67,8 @@ export default function ChatPage() {
     dispatch(addMessage(tempMessage));
 
     socket.emit("send_message", {
-      type:'private',
-      
+      type: "private",
+
       conversationId: selectedConversation,
       content: message,
     });
@@ -78,25 +79,10 @@ export default function ChatPage() {
   return (
     <div className="h-screen flex bg-gray-100">
       {/* ================= SIDEBAR ================= */}
-      <div className="w-80 bg-white border-r flex flex-col">
-        <div className="h-16 flex items-center px-4 border-b font-semibold text-lg">
-          Chats
-        </div>
-
-        <div className="flex-1 overflow-y-auto">
-          <div
-            onClick={() => setSelectedConversation("1")}
-            className={`p-4 cursor-pointer border-b hover:bg-gray-100 ${
-              selectedConversation === "1" ? "bg-gray-100" : ""
-            }`}
-          >
-            <div className="font-medium">Rahul</div>
-            <div className="text-sm text-gray-500 truncate">
-              Last message preview...
-            </div>
-          </div>
-        </div>
-      </div>
+      <Sidebar 
+        selectedConversation={selectedConversation}
+        setSelectedConversation={setSelectedConversation}
+      />
 
       {/* ================= CHAT SECTION ================= */}
       <div className="flex-1 flex flex-col">
