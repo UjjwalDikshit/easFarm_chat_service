@@ -1,7 +1,7 @@
 const Message = require("../models/message");
 const Conversation = require("../models/conversation");
 
-const createMessage = async ({ content, conversationId, senderId }) => {
+const createMessage = async ({ type,content, conversationId, senderId }) => {
 
     if (!content) {
         throw new Error("Message content is required");
@@ -13,21 +13,22 @@ const createMessage = async ({ content, conversationId, senderId }) => {
 
     // 1️⃣ Create message
     const message = await Message.create({
+        type,
         content,
-        senderId: senderId,
-        conversationId: conversationId ,
+        senderId,
+        conversationId,
     });
 
     // 2️⃣ Update lastMessage (for chaining optimization)
     if (conversationId) {
-        await Conversation.findByIdAndUpdate(conversationId, {
+        await Conversation.conversation.findByIdAndUpdate(conversationId, {
             lastMessage: message._id
         });
     }
 
     // 3️⃣ Populate sender for frontend
     const populatedMessage = await Message.findById(message._id)
-        .populate("sender", "name uniqueId")
+        .populate("senderId", "name uniqueId")
         .lean();
 
     return populatedMessage;

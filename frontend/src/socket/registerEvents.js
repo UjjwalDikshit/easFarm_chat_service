@@ -15,6 +15,7 @@ export const registerSocketEvents = (dispatch) => {
   });
 
   socket.on("new_message", (message) => {
+    console.log(message);
     dispatch(addMessage(message));
   });
 

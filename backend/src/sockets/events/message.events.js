@@ -1,12 +1,12 @@
 const { createMessage } = require("../../services/message.services");
-const { conversationMember } = require("../../models/conversation");
+const { conversationMember,conversation } = require("../../models/conversation");
 
 module.exports = function (io, socket) {
 
   socket.on("send_message", async (data, cb) => {
     try {
 
-      const { content, conversationId } = data;
+      const { type,content, conversationId } = data;
       const senderId = socket.user._id;// chatUserId
 
       if (!content) {
@@ -19,11 +19,19 @@ module.exports = function (io, socket) {
       ==================================
       */
       const message = await createMessage({
+        type,
         content,
         conversationId,
         senderId
       });
 
+      await conversation.updateOne(
+        { _id: conversationId },
+        {
+          lastMessageId: message._id,
+          lastMessageAt: new Date()
+        }
+      );
       /*
       ==================================
       2️⃣ UPDATE UNREAD COUNT
@@ -46,7 +54,7 @@ module.exports = function (io, socket) {
       ==================================
       */
 
-      io.to(conversationId).emit("message:new", message);
+      socket.to(conversationId).emit("new_message", message);
 
       /*
       ==================================
@@ -54,7 +62,7 @@ module.exports = function (io, socket) {
       ==================================
       */
 
-      io.to(conversationId).emit("notification:newMessage", {
+      socket.to(conversationId).emit("notification:newMessage", {
         conversationId,
         message
       });

@@ -1,5 +1,5 @@
 const mongoose = require("mongoose");
-const  { conversation, conversationMember }= require("../models/conversation");
+const { conversation, conversationMember } = require("../models/conversation");
 
 async function myThing(req, res) {
   try {
@@ -52,6 +52,26 @@ async function myThing(req, res) {
           },
         },
       },
+      // =========================
+      // GET LAST MESSAGE
+      // =========================
+
+      {
+        $lookup: {
+          from: "messages",
+          localField: "lastMessageId",
+          foreignField: "_id",
+          as: "lastMessage",
+        },
+      },
+
+      {
+        $unwind: {
+          path: "$lastMessage",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+
       {
         $sort: { lastMessageAt: -1 },
       },
@@ -70,7 +90,6 @@ async function myThing(req, res) {
 }
 module.exports = myThing;
 
-
 /*
 {
  "success": true,
@@ -82,7 +101,9 @@ module.exports = myThing;
    "description": "Private group for farmers",
    "unreadCount": 0,
    "role": "admin",
-   "lastMessageAt": "2026-03-07T11:13:54.405Z"
+   "lastMessageAt": "2026-03-07T11:13:54.405Z" 
+   "lastMessage":{
+   }
   }
  ]
 }

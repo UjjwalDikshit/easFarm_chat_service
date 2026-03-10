@@ -60,14 +60,14 @@ export default function ChatPage() {
     const tempMessage = {
       _id: Date.now(),
       conversationId: selectedConversation,
-      text: message,
+      content: message,
       senderId: "me",
     };
 
     dispatch(addMessage(tempMessage));
 
     socket.emit("send_message", {
-      type: "private",
+      type: "text",
 
       conversationId: selectedConversation,
       content: message,
@@ -125,7 +125,7 @@ export default function ChatPage() {
                         : "bg-white text-gray-800 rounded-bl-none"
                     }`}
                   >
-                    {msg.text}
+                    {msg.content}
                   </div>
                 </div>
               ))}

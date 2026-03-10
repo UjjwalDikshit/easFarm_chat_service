@@ -21,7 +21,7 @@ const chatSlice = createSlice({
       if (!state.messages[convId]) {
         state.messages[convId] = [];
       }
-
+      console.log(msg);
       state.messages[convId].push(msg);
     },
 

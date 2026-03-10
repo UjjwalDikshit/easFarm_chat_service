@@ -1,6 +1,7 @@
 import React from "react";
 
 export default function ConversationCard({ conversation, isActive, onClick }) {
+  console.log(conversation)
   const name =
     conversation.name ||
     (conversation.type === "private"
@@ -34,7 +35,7 @@ export default function ConversationCard({ conversation, isActive, onClick }) {
         </div>
 
         <div className="text-sm text-gray-500 truncate">
-          {conversation.lastMessage || "Start chatting"}
+          {conversation.lastMessage?.content?.slice(0, 40) || "Start chatting"}
         </div>
       </div>
     </div>
