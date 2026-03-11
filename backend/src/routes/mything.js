@@ -6,6 +6,6 @@ const getUserConversations = require('../controllers/mything')
 const getAllMessageOfConversation = require('../controllers/myConversation')
 // POST /user/grp/create
 router.get("/fetch",authMiddleware, getUserConversations);
-router.get('/fetch',authMiddleware,getAllMessageOfConversation);
+router.get("/getUserConversation",getAllMessageOfConversation);//authMiddleware
 
 module.exports = router;

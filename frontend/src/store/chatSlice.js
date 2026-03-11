@@ -1,13 +1,23 @@
 // src/store/chatSlice.js
 
 import { createSlice } from "@reduxjs/toolkit";
+import { createAsyncThunk } from "@reduxjs/toolkit";
+import { fetchChatsAPI } from "../pages/ChatPage/ChatSection/api/fetchChatsAPI";
+
+export const fetchChats = createAsyncThunk(
+  "chat/fetchMessages",
+  async ({ conversationId, cursor }) => {
+    const data = await fetchChatsAPI(conversationId, cursor);
+    return { conversationId, ...data };
+  },
+);
 
 const chatSlice = createSlice({
   name: "chat",
   initialState: {
     conversations: [],
-    messages: {},   // { conversationId: [messages] }
-    typing: {},     // { conversationId: userId }
+    messages: {}, // { conversationId: [messages] }
+    typing: {}, // { conversationId: userId }
   },
   reducers: {
     setConversations: (state, action) => {
@@ -39,6 +49,33 @@ const chatSlice = createSlice({
       const conversationId = action.payload;
       delete state.typing[conversationId];
     },
+  },
+  extraReducers: (builder) => {
+    builder
+      .addCase(fetchChats.pending, (state) => {
+        state.loading = true;
+      })
+
+      .addCase(fetchChats.fulfilled, (state, action) => {
+        state.loading = false;
+
+        const { conversationId, messages } = action.payload;
+
+        if (!state.messages[conversationId]) {
+          state.messages[conversationId] = [];
+        }
+
+        // prepend for scroll pagination
+        state.messages[conversationId] = [
+          ...messages,
+          ...state.messages[conversationId],
+        ];
+      })
+
+      .addCase(fetchChats.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.error.message;
+      });
   },
 });
 

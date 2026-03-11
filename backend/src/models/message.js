@@ -23,7 +23,6 @@ const messageSchema = new mongoose.Schema(
       default: "text",
     },
 
-
     content: {
       type: mongoose.Schema.Types.Mixed,
       required: true,
@@ -42,14 +41,17 @@ const messageSchema = new mongoose.Schema(
   {
     timestamps: true, // createdAt & updatedAt
     versionKey: false,
-  }
+  },
 );
-
 
 // 🚀 CRITICAL INDEX FOR FAST PAGINATION
 // Used in: Message.find({ conversationId }).sort({ createdAt: -1 }).limit(20)
 messageSchema.index({ conversationId: 1, createdAt: -1 });
-
+messageSchema.index({
+  conversationId: 1,
+  deletedGlobally: 1,
+  createdAt: -1,
+});
 // Optional: fast sender lookup (analytics, moderation, etc.)
 messageSchema.index({ senderId: 1, createdAt: -1 });
 
