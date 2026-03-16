@@ -57,7 +57,7 @@ module.exports = function (io, socket) {
       ==================================
       */
 
-      socket.to(conversationId).emit("new_message", message);
+      socket.to(`conversation:${conversationId}`).emit("new_message", message);
 
       /*
       ==================================
@@ -65,7 +65,7 @@ module.exports = function (io, socket) {
       ==================================
       */
 
-      socket.to(conversationId).emit("notification:newMessage", {
+      socket.to(`conversation:${conversationId}`).emit("notification:newMessage", {
         conversationId,
         message ,
         clientId,

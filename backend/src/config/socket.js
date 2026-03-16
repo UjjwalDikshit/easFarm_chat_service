@@ -1,20 +1,18 @@
 const { Server } = require("socket.io");
-const { createAdapter } = require("@socket.io/redis-adapter");
-const { createClient } = require("redis");
 const socketConnection = require("../sockets/connection");
-
+const { createAdapter } = require("@socket.io/redis-adapter");
+const {pub,sub} = require('./redis');
 let io;
 
 async function initSocket(server) {
     io = new Server(server, {
         cors: {
             origin: "*",
-        }
+        },
+        adapter: createAdapter(pub, sub)
     });
 
     console.log('socket server created');
-    // io.adapter(createAdapter(pubClient, subClient));
-
     socketConnection(io);
 }
 

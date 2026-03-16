@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Send } from "lucide-react";
 import { connectSocket, getSocket } from "../socket/socket";
 import { registerSocketEvents } from "../socket/registerEvents";
 import { useDispatch, useSelector } from "react-redux";
@@ -28,7 +27,8 @@ export default function ChatPage() {
       socket.off("new_message");
       socket.off("presence:state");
       socket.off("presence:update");
-      socket.off("typing");
+      socket.off("start_typing");
+      socket.off("stop_typing");
     };
   }, [dispatch]);
 

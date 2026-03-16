@@ -1,7 +1,7 @@
 // src/socket/registerEvents.js
 
 import { getSocket } from "./socket";
-import { addMessage, setTyping } from "../store/chatSlice";
+import { addMessage, clearTyping, setTyping } from "../store/chatSlice";
 import { setPresence, setBulkPresence } from "../store/presenceSlice";
 import { updateLastMessage } from "../store/conversationSlice";
 
@@ -32,8 +32,12 @@ export const registerSocketEvents = (dispatch) => {
     dispatch(setOffline(userId));
   });
 
-  socket.on("typing", ({ conversationId, userId }) => {
+  socket.on("start_typing", ({ conversationId, userId }) => {
     dispatch(setTyping({ conversationId, userId }));
+  });
+
+  socket.on("stop_typing", ({ conversationId, userId }) => {
+    dispatch(clearTyping({ conversationId, userId }));
   });
 
   socket.on("presence:state", (users) => {

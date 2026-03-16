@@ -23,6 +23,8 @@ const client = createClient({
 });
 
 client.on("error", (err) => console.error("Redis Client Error:", err));
+client.on('reconnecting', () => console.log('Redis: Client is reconnecting...'));
+client.on('ready', () => console.log('Redis: Client is ready and connected!'));
 
 // Self-invoking connection logic or explicit connect function
 const connectRedis = async () => {

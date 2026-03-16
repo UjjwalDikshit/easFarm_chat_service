@@ -7,9 +7,14 @@ export default function ChatHeader({ conversationId }) {
   const presence = useSelector((state) => state.presence.users);
 
   const conversation = useSelector(
-    (state) => state.conversations.byId[conversationId]
+    (state) => state.conversations.byId[conversationId],
   );
 
+  const typingUsers =
+    useSelector((state) => state.chat.typing[conversationId]) || {};
+
+  const users = Object.keys(typingUsers);
+  console.log(users);
   if (!conversation) return null;
 
   const title =
@@ -17,15 +22,9 @@ export default function ChatHeader({ conversationId }) {
       ? conversation.otherMember?.name
       : conversation.name;
 
-  const avatar =
-    conversation.type === "private"
-      ? conversation.otherMember?.avatar
-      : conversation.avatar;
-
-  const isOnline = // seems here wrong
+  const isOnline =
     conversation.type === "private" &&
-    presence[conversation.otherMember?._id];
-
+    presence?.[conversation.otherMember?._id];
 
   return (
     <div className="h-16 bg-white border-b flex items-center justify-between px-6">
@@ -35,16 +34,21 @@ export default function ChatHeader({ conversationId }) {
         </div>
 
         <div>
-          <div className="font-semibold">{title.toUpperCase()}</div>
-          {conversation.type === "private" && (
-            <div className="text-sm">
-              {isOnline ? (
+          <div className="font-semibold">{title?.toUpperCase()}</div>
+
+          <div className="text-sm">
+            {users.length > 0 ? (
+              <span className="text-blue-500">
+                {users.join(", ")} typing...
+              </span>
+            ) : conversation.type === "private" ? (
+              isOnline ? (
                 <span className="text-green-500">Online</span>
               ) : (
                 <span className="text-gray-400">Offline</span>
-              )}
-            </div>
-          )}
+              )
+            ) : null}
+          </div>
         </div>
       </div>
 

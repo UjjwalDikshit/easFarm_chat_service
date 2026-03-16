@@ -32,7 +32,7 @@ module.exports = function (io) {
 
     socket.on("disconnect", async() => {
       await disconnectEvent.removeOnlineUser(socket);
-      // disconnectEvent.removeTypingUser(socket, typingUsers);
+      disconnectEvent.removeTypingUser(socket, typingUsers);
       //await cleanPresence();  donot remove this , this is for help to remove all socket, put due to nodemon server restart
       console.log("User disconnected:", socket.chatUserId);
     });

@@ -162,7 +162,7 @@ function registerConversationEvents(io, socket) {
 
       if (!membership) return;
       console.log('user has joined ',conversationId);
-      socket.join(conversationId);
+      socket.join(`conversation:${conversationId}`);
     } catch (err) {
       console.error("Join error:", err);
     }
@@ -174,7 +174,7 @@ function registerConversationEvents(io, socket) {
   ==========================================
   */
   socket.on("leave_conversation", ({ conversationId }) => {
-    socket.leave(conversationId);
+    socket.leave(`conversation:${conversationId}`);
   });
 }
 

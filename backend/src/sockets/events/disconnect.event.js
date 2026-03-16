@@ -30,18 +30,19 @@ const removeOnlineUser = async function (socket) {
 REMOVE TYPING USER
 ==================================================
 */
-const removeTypingUser = function (io, socket, typingUsers) {
-  const userId = socket.user?._id?.toString();
+const removeTypingUser = function (socket, typingUsers) {
+  const userId = socket.chatUserId.toString();
+  console.log(userId);
   if (!userId) return;
 
   for (const [key, timeout] of typingUsers.entries()) {
-    if (key.endsWith(`_${userId}`)) {
-      clearTimeout(timeout);
+    if (key.endsWith(`:${userId}`)) {
 
-      const roomId = key.split("_")[0];
+      const conversationId = key.split(":")[0];
+      const roomId = `conversation:${conversationId}`;
 
-      socket.to(roomId).emit("typing:stop", {
-        roomId,
+      socket.to(roomId).emit("stop_typing", {
+        conversationId,
         userId,
       });
 

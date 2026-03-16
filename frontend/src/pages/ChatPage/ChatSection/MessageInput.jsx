@@ -9,6 +9,7 @@ import {
   replaceTempMessage,
   markMessageFailed,
 } from "../../../store/chatSlice";
+import { setTyping, clearTyping } from "../../../store/chatSlice";
 import { useDispatch, useSelector } from "react-redux";
 import { v4 as uuid } from "uuid";
 
@@ -16,11 +17,26 @@ export default function MessageInput({ selectedConversation }) {
   const [message, setMessage] = useState("");
   const dispatch = useDispatch();
   const user = useSelector((state) => state.auth.user);
+  const typingTimeout = React.useRef(null);
+  const isTyping = React.useRef(false);
+  const socket = getSocket();
+
+  useEffect(() => {
+    return () => {
+      if (isTyping.current && selectedConversation) {
+        socket.emit("stop_typing", {
+          conversationId: selectedConversation,
+        });
+
+        clearTimeout(typingTimeout.current);
+        typingTimeout.current = null;
+        isTyping.current = false;
+      }
+    };
+  }, [selectedConversation]);
 
   const sendMessage = () => {
     if (!message.trim() || !selectedConversation) return;
-
-    const socket = getSocket();
 
     const tempId = uuid(); // unique temporary id
     // console.log(user.user._id,typeof user.user._id);
@@ -63,7 +79,39 @@ export default function MessageInput({ selectedConversation }) {
       },
     );
 
+    socket.emit("stop_typing", {
+      conversationId: selectedConversation,
+    });
+
+    clearTimeout(typingTimeout.current);
+    isTyping.current = false;
     setMessage("");
+  };
+
+  const handleTyping = (value) => {
+    if (!selectedConversation) return;
+    if (!value.trim()) return;
+
+    // emit start only once
+    if (!isTyping.current) {
+      socket.emit("start_typing", {
+        conversationId: selectedConversation,
+      });
+      isTyping.current = true;
+    }
+
+    // reset stop timer
+    // if (typingTimeout.current) {
+    clearTimeout(typingTimeout.current);
+    //}
+
+    typingTimeout.current = setTimeout(() => {
+      socket.emit("stop_typing", {
+        conversationId: selectedConversation,
+      });
+      typingTimeout.current = null;
+      isTyping.current = false;
+    }, 3000);
   };
 
   return (
@@ -72,7 +120,11 @@ export default function MessageInput({ selectedConversation }) {
         <input
           type="text"
           value={message}
-          onChange={(e) => setMessage(e.target.value)}
+          onChange={(e) => {
+            const value = e.target.value;
+            setMessage(value);
+            handleTyping(value);
+          }}
           placeholder="Type a message..."
           className="flex-1 bg-gray-100 px-4 py-3 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-400"
           onKeyDown={(e) => e.key === "Enter" && sendMessage()}

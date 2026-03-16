@@ -17,7 +17,7 @@ const chatSlice = createSlice({
   initialState: {
     conversations: [],
     messages: {}, // { conversationId: [messages] }
-    typing: {}, // { conversationId: userId }
+    typing: {}, // { conversationId: { userId: true } }
   },
   reducers: {
     setConversations: (state, action) => {
@@ -45,12 +45,24 @@ const chatSlice = createSlice({
 
     setTyping: (state, action) => {
       const { conversationId, userId } = action.payload;
-      state.typing[conversationId] = userId;
+
+      if (!state.typing[conversationId]) {
+        state.typing[conversationId] = {};
+      }
+
+      state.typing[conversationId][userId] = true;
     },
 
     clearTyping: (state, action) => {
-      const conversationId = action.payload;
-      delete state.typing[conversationId];
+      const { conversationId, userId } = action.payload;
+
+      if (!state.typing[conversationId]) return;
+
+      delete state.typing[conversationId][userId];
+
+      if (Object.keys(state.typing[conversationId]).length === 0) {
+        delete state.typing[conversationId];
+      }
     },
 
     replaceTempMessage: (state, action) => {
