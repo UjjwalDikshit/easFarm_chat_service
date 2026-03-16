@@ -2,36 +2,66 @@
 // User types message, attaches media, sends message (via socket/API).
 import React from "react";
 import { Send } from "lucide-react";
-import { useState,useEffect } from "react";
+import { useState, useEffect } from "react";
 import { getSocket } from "../../../socket/socket";
-import { addMessage } from "../../../store/chatSlice";
-import { useDispatch } from "react-redux";
+import {
+  addMessage,
+  replaceTempMessage,
+  markMessageFailed,
+} from "../../../store/chatSlice";
+import { useDispatch, useSelector } from "react-redux";
+import { v4 as uuid } from "uuid";
 
-export default function MessageInput(selectedConversation) {
+export default function MessageInput({ selectedConversation }) {
   const [message, setMessage] = useState("");
   const dispatch = useDispatch();
-
+  const user = useSelector((state) => state.auth.user);
 
   const sendMessage = () => {
     if (!message.trim() || !selectedConversation) return;
 
     const socket = getSocket();
 
+    const tempId = uuid(); // unique temporary id
+    // console.log(user.user._id,typeof user.user._id);
     const tempMessage = {
-      _id: Date.now(),
+      _id: tempId,
+      clientId: tempId,
       conversationId: selectedConversation,
       content: message,
-      senderId: "me",
+      senderId: String(user.user._id),
+      status: "sending",
+      createdAt: new Date().toISOString(),
     };
-
+    console.log(tempMessage);
     dispatch(addMessage(tempMessage));
 
-    socket.emit("send_message", {
-      type: "text",
-
-      conversationId: selectedConversation,
-      content: message,
-    });
+    socket.emit(
+      "send_message",
+      {
+        type: "text",
+        conversationId: selectedConversation,
+        content: message,
+        clientId: tempId,
+      },
+      (response) => {
+        if (!response.success) {
+          dispatch(markMessageFailed(tempId));
+          return;
+        }
+        console.log(response.message);
+        console.log(typeof response.message.senderId);
+        dispatch(
+          replaceTempMessage({
+            clientId: tempId,
+            message: {
+              ...response.message,
+              senderId: String(response.message.senderId),
+            },
+          }),
+        );
+      },
+    );
 
     setMessage("");
   };

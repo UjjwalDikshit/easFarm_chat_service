@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import {  Send } from "lucide-react";
+import { Send } from "lucide-react";
 import { connectSocket, getSocket } from "../socket/socket";
 import { registerSocketEvents } from "../socket/registerEvents";
 import { useDispatch, useSelector } from "react-redux";
@@ -13,7 +13,10 @@ export default function ChatPage() {
   const dispatch = useDispatch();
 
   const [selectedConversation, setSelectedConversation] = useState(null);
-  
+
+  const conversation = useSelector(
+    (state) => state.conversations.byId[selectedConversation],
+  );
 
   /* ================= SOCKET SETUP ================= */
 
@@ -23,8 +26,8 @@ export default function ChatPage() {
 
     return () => {
       socket.off("new_message");
-      socket.off("user_online");
-      socket.off("user_offline");
+      socket.off("presence:state");
+      socket.off("presence:update");
       socket.off("typing");
     };
   }, [dispatch]);
@@ -35,18 +38,50 @@ export default function ChatPage() {
     const socket = getSocket();
     if (!socket || !selectedConversation) return;
 
-    socket.emit("join_conversation", {conversationId:selectedConversation});
+    
+    const userIds =
+    conversation.type === "private"
+      ? [conversation.otherMember._id]
+      : [];
+
+    // join conversation for messages
+    socket.emit("join_conversation", {
+      conversationId: selectedConversation,
+    });
+
+    // subscribe to presence
+    userIds.forEach((userId) => {
+      socket.emit("presence:subscribe", {userId});
+    });
+
+    // check current presence
+    // socket.emit("presence:check", { userIds });
 
     return () => {
-      socket.emit("leave_conversation", {conversationId:selectedConversation});
+      socket.emit("leave_conversation", {
+        conversationId: conversation._id,
+      });
+
+      userIds.forEach((userId) => {
+        socket.emit("presence:unsubscribe", { user:[conversation.otherMember._id] });
+      });
     };
   }, [selectedConversation]);
 
 
+  const auth = useSelector((state) => state.auth);
+
+  if (auth.loading) {
+    return (
+      <div className="h-screen flex items-center justify-center">
+        Loading...
+      </div>
+    );
+  }
   return (
     <div className="h-screen flex bg-gray-100">
       {/* ================= SIDEBAR ================= */}
-      <Sidebar 
+      <Sidebar
         selectedConversation={selectedConversation}
         setSelectedConversation={setSelectedConversation}
       />
@@ -56,12 +91,12 @@ export default function ChatPage() {
         {selectedConversation ? (
           <>
             {/* HEADER */}
-            <ChatHeader/>
+            <ChatHeader conversationId={selectedConversation} />
             {/* MESSAGE LIST */}
-            <MessageList selectedConversation = {selectedConversation}/>
+            <MessageList selectedConversation={selectedConversation} />
 
             {/* INPUT */}
-            <MessageInput selectedConversation={selectedConversation}/>
+            <MessageInput selectedConversation={selectedConversation} />
           </>
         ) : (
           <div className="flex-1 flex items-center justify-center text-gray-400 text-lg">

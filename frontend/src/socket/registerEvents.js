@@ -2,7 +2,8 @@
 
 import { getSocket } from "./socket";
 import { addMessage, setTyping } from "../store/chatSlice";
-import { setOnline, setOffline } from "../store/presenceSlice";
+import { setPresence, setBulkPresence } from "../store/presenceSlice";
+import { updateLastMessage } from "../store/conversationSlice";
 
 export const registerSocketEvents = (dispatch) => {
   const socket = getSocket();
@@ -15,8 +16,12 @@ export const registerSocketEvents = (dispatch) => {
   });
 
   socket.on("new_message", (message) => {
-    console.log(message);
-    dispatch(addMessage(message));
+    dispatch(
+      addMessage({
+        ...message,
+        senderId: String(message.senderId),
+      }));
+      dispatch(updateLastMessage(message));
   });
 
   socket.on("user_online", (userId) => {
@@ -29,5 +34,13 @@ export const registerSocketEvents = (dispatch) => {
 
   socket.on("typing", ({ conversationId, userId }) => {
     dispatch(setTyping({ conversationId, userId }));
+  });
+
+  socket.on("presence:state", (users) => {
+    // users = [{ userId, online }]
+    dispatch(setBulkPresence(users));
+  });
+  socket.on("presence:update", ({ userId, online }) => {
+    dispatch(setPresence({ userId, online }));
   });
 };

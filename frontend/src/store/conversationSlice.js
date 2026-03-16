@@ -8,23 +8,49 @@ export const fetchConversations = createAsyncThunk(
   }
 );
 
+
 const conversationSlice = createSlice({
   name: "conversations",
   initialState: {
-    conversations: [],
+    byId: {},
+    allIds: [],
     loading: false,
     error: null,
   },
-  reducers: {},
+
+  reducers: {
+    updateLastMessage: (state, action) => {
+      const message = action.payload;
+      const conv = state.byId[message.conversationId];
+
+      if (!conv) return;
+
+      conv.lastMessage = message;
+      conv.lastMessageAt = message.createdAt;
+    },
+  },
+
   extraReducers: (builder) => {
     builder
       .addCase(fetchConversations.pending, (state) => {
         state.loading = true;
       })
+
       .addCase(fetchConversations.fulfilled, (state, action) => {
         state.loading = false;
-        state.conversations = action.payload;
+
+        const byId = {};
+        const allIds = [];
+
+        action.payload.forEach((conv) => {
+          byId[conv._id] = conv;
+          allIds.push(conv._id);
+        });
+
+        state.byId = byId;
+        state.allIds = allIds;
       })
+
       .addCase(fetchConversations.rejected, (state, action) => {
         state.loading = false;
         state.error = action.error.message;
@@ -32,4 +58,5 @@ const conversationSlice = createSlice({
   },
 });
 
+export const { updateLastMessage } = conversationSlice.actions;
 export default conversationSlice.reducer;

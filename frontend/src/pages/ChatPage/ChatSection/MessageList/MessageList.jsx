@@ -77,7 +77,8 @@ export default function MessageList({ selectedConversation }) {
 
       {/* Message list */}
       {messages.map((msg) => (
-        <MessageBubble key={msg._id} msg={msg} />
+
+        <MessageBubble key={msg.clientId || msg._id} msg={msg} />
       ))}
 
       {/* Bottom scroll anchor */}

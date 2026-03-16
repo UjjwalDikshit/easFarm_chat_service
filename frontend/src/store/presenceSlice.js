@@ -5,22 +5,21 @@ import { createSlice } from "@reduxjs/toolkit";
 const presenceSlice = createSlice({
   name: "presence",
   initialState: {
-    onlineUsers: [],
+    users: {} // { userId: true/false }
   },
   reducers: {
-    setOnline: (state, action) => {
-      if (!state.onlineUsers.includes(action.payload)) {
-        state.onlineUsers.push(action.payload);
-      }
+    setPresence: (state, action) => {
+      const { userId, online } = action.payload;
+      state.users[userId] = online;
     },
 
-    setOffline: (state, action) => {
-      state.onlineUsers = state.onlineUsers.filter(
-        (id) => id !== action.payload
-      );
-    },
-  },
+    setBulkPresence: (state, action) => {
+      action.payload.forEach(({ userId, online }) => {
+        state.users[userId] = online;
+      });
+    }
+  }
 });
 
-export const { setOnline, setOffline } = presenceSlice.actions;
+export const { setPresence, setBulkPresence } = presenceSlice.actions;
 export default presenceSlice.reducer;

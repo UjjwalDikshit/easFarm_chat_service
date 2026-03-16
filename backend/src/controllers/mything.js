@@ -5,28 +5,14 @@ async function myThing(req, res) {
   try {
     const userId = req.user._id;
 
-    // const memberships = await conversationMember
-    //   .find({ userId })
-    //   .populate({
-    //     path: "conversationId",
-    //     populate: {
-    //       path: "lastMessageId",
-    //     },
-    //   })
-    //   .sort({ "conversationId.lastMessageAt": -1 });
-
-    // const conversations = memberships
-    //   .map((m) => ({
-    //     ...m.conversationId.toObject(),
-    //     unreadCount: m.unreadCount,
-    //     role: m.role,
-    //   }))
-    //   .filter(Boolean);
-
     const conversations = await conversationMember.aggregate([
+      
+      // 1️ Find all conversations where current user is a member
       {
         $match: { userId: new mongoose.Types.ObjectId(userId) },
       },
+
+      // 2️ Join conversation details
       {
         $lookup: {
           from: "conversations",
@@ -35,9 +21,14 @@ async function myThing(req, res) {
           as: "conversation",
         },
       },
+
+      // conversation comes as array → convert to object
       {
         $unwind: "$conversation",
       },
+
+      // 3️ Merge membership data into conversation object
+      // So frontend gets everything in one object
       {
         $replaceRoot: {
           newRoot: {
@@ -52,10 +43,70 @@ async function myThing(req, res) {
           },
         },
       },
+
+      // =========================
+      // ONLY FOR PRIVATE CHAT → FIND OTHER MEMBER
+      // =========================
+
+      // 4️ Get all members of this conversation
+      {
+        $lookup: {
+          from: "conversationmembers",
+          localField: "_id",
+          foreignField: "conversationId",
+          as: "members",
+        },
+      },
+
+      // 5️ From members list remove current user
+      // Remaining user = other member
+      {
+        $addFields: {
+          otherMemberId: {
+            $cond: [
+              { $eq: ["$type", "private"] }, // only run for private chats
+              {
+                $first: {
+                  $filter: {
+                    input: "$members",
+                    as: "member",
+                    cond: {
+                      $ne: [
+                        "$$member.userId",
+                        new mongoose.Types.ObjectId(userId),
+                      ],
+                    },
+                  },
+                },
+              },
+              null, // for group chats keep null
+            ],
+          },
+        },
+      },
+
+      // 6️ Fetch other member user details
+      {
+        $lookup: {
+          from: "chatusers",
+          localField: "otherMemberId.userId",
+          foreignField: "_id",
+          as: "otherMember",
+        },
+      },
+
+      {
+        $unwind: {
+          path: "$otherMember",
+          preserveNullAndEmptyArrays: true, // groups will keep null
+        },
+      },
+
       // =========================
       // GET LAST MESSAGE
       // =========================
 
+      // 7️ Fetch last message for preview in chat list
       {
         $lookup: {
           from: "messages",
@@ -72,8 +123,17 @@ async function myThing(req, res) {
         },
       },
 
+      // 8️ Sort conversations by last activity
       {
         $sort: { lastMessageAt: -1 },
+      },
+
+      // 9️⃣ Clean unnecessary internal fields
+      {
+        $project: {
+          members: 0,
+          otherMemberId: 0,
+        },
       },
     ]);
 
@@ -81,6 +141,7 @@ async function myThing(req, res) {
       success: true,
       conversations,
     });
+
   } catch (error) {
     res.status(500).json({
       success: false,
@@ -88,23 +149,5 @@ async function myThing(req, res) {
     });
   }
 }
-module.exports = myThing;
 
-/*
-{
- "success": true,
- "conversations": [
-  {
-   "_id": "69ac0872dfca00e453c73717",
-   "type": "private-group",
-   "name": "Farmers Discussion",
-   "description": "Private group for farmers",
-   "unreadCount": 0,
-   "role": "admin",
-   "lastMessageAt": "2026-03-07T11:13:54.405Z" 
-   "lastMessage":{
-   }
-  }
- ]
-}
- */
+module.exports = myThing;

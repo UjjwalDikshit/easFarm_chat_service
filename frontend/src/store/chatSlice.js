@@ -31,8 +31,11 @@ const chatSlice = createSlice({
       if (!state.messages[convId]) {
         state.messages[convId] = [];
       }
-      console.log(msg);
-      state.messages[convId].push(msg);
+
+      state.messages[convId].push({
+        ...msg,
+        senderId: msg.senderId ? msg.senderId.toString() : msg.senderId,
+      });
     },
 
     setMessages: (state, action) => {
@@ -48,6 +51,37 @@ const chatSlice = createSlice({
     clearTyping: (state, action) => {
       const conversationId = action.payload;
       delete state.typing[conversationId];
+    },
+
+    replaceTempMessage: (state, action) => {
+      const { clientId, message } = action.payload;
+      const convId = message.conversationId;
+
+      const index = state.messages[convId]?.findIndex(
+        (m) => m.clientId === clientId, // msg ka clientId, and server se bheja hua message ka clientId
+      );
+
+      if (index !== -1) {
+        state.messages[convId][index] = {
+          ...message,
+          senderId:
+            typeof message.senderId === "object"
+              ? message.senderId.toString()
+              : message.senderId,
+        };
+      }
+    },
+
+    markMessageFailed: (state, action) => {
+      const tempId = action.payload;
+
+      Object.keys(state.messages).forEach((convId) => {
+        const msg = state.messages[convId]?.find((m) => m._id === tempId);
+
+        if (msg) {
+          msg.status = "failed";
+        }
+      });
     },
   },
   extraReducers: (builder) => {
@@ -65,9 +99,23 @@ const chatSlice = createSlice({
           state.messages[conversationId] = [];
         }
 
-        // prepend for scroll pagination
+        const existingIds = new Set(
+          state.messages[conversationId].map((m) => m._id),
+        );
+
+        const olderMessages = messages
+          .map((m) => ({
+            ...m,
+            senderId:
+              typeof m.senderId === "object"
+                ? m.senderId.toString()
+                : m.senderId,
+          }))
+          .reverse()
+          .filter((m) => !existingIds.has(m._id));
+
         state.messages[conversationId] = [
-          ...messages,
+          ...olderMessages,
           ...state.messages[conversationId],
         ];
       })
@@ -85,6 +133,8 @@ export const {
   setMessages,
   setTyping,
   clearTyping,
+  replaceTempMessage,
+  markMessageFailed,
 } = chatSlice.actions;
 
 export default chatSlice.reducer;

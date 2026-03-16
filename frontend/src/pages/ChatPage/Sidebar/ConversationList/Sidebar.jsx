@@ -11,7 +11,9 @@ export default function Sidebar({
 }) {
   const dispatch = useDispatch();
 
-  const { conversations, loading } = useSelector((state) => state.conversations);
+  const { byId, allIds, loading } = useSelector((state) => state.conversations);
+
+  const conversations = allIds.map((id) => byId[id]);
 
   useEffect(() => {
     dispatch(fetchConversations());
@@ -38,7 +40,6 @@ export default function Sidebar({
             onClick={() => setSelectedConversation(conv._id)}
           />
         ))}
-
       </div>
     </div>
   );

@@ -12,12 +12,6 @@ async function initSocket(server) {
         }
     });
 
-    // // Redis setup
-    // const pubClient = createClient({ url: process.env.REDIS_URL });
-    // const subClient = pubClient.duplicate();
-
-    // await pubClient.connect();
-    // await subClient.connect();
     console.log('socket server created');
     // io.adapter(createAdapter(pubClient, subClient));
 

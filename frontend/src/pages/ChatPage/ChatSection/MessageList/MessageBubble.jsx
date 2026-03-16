@@ -1,12 +1,48 @@
-// UI for a single message.
-// Shows text/media, sender, time, message status (sent/read).
 import React from "react";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
+import { getSocket } from "../../../../socket/socket";
+import { replaceTempMessage } from "../../../../store/chatSlice";
 
 export default function MessageBubble({ msg }) {
   const currentUser = useSelector((state) => state.auth.user);
+  const dispatch = useDispatch();
 
-  const isMe = msg.senderId === currentUser?._id;
+  if (!currentUser) {
+    return <p>You are not valid User.</p>;
+  }
+
+  console.log("senderId of msg", msg.senderId, "current user_id", currentUser.user._id);
+  console.dir(msg.senderId);
+  console.dir(currentUser.user._id);
+
+  // const myId = currentUser?._id || currentUser?.user?._id;
+  // console.log(msg.senderId);
+  // const isMe = String(msg.senderId) === String(myId);
+  const isMe = msg.senderId === currentUser.user._id;
+
+  console.log(isMe);
+  const retryMessage = () => {
+    const socket = getSocket();
+    socket.emit(
+      "send_message",
+      {
+        type: msg.type || "text",
+        conversationId: msg.conversationId,
+        content: msg.content,
+        clientId: msg._id,
+      },
+      (response) => {
+        if (!response.success) return;
+
+        dispatch(
+          replaceTempMessage({
+            clientId: msg._id,
+            message: response.message,
+          }),
+        );
+      },
+    );
+  };
 
   const time = new Date(msg.createdAt).toLocaleTimeString([], {
     hour: "2-digit",
@@ -62,13 +98,22 @@ export default function MessageBubble({ msg }) {
 
         {/* Time + Status */}
         <div
-          className={`text-[10px] mt-1 flex items-center gap-1 ${
+          className={`text-[10px] mt-1 flex items-center gap-2 ${
             isMe ? "text-blue-100 justify-end" : "text-gray-400"
           }`}
         >
           <span>{time}</span>
 
-          {isMe && <span>✓</span>}
+          {isMe && msg.status !== "failed" && <span>✓</span>}
+
+          {msg.status === "failed" && (
+            <button
+              onClick={retryMessage}
+              className="text-red-500 text-[10px] underline"
+            >
+              Retry
+            </button>
+          )}
         </div>
       </div>
     </div>

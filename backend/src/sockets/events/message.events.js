@@ -1,13 +1,16 @@
 const { createMessage } = require("../../services/message.services");
-const { conversationMember,conversation } = require("../../models/conversation");
+const {
+  conversationMember,
+  conversation,
+} = require("../../models/conversation");
+const { isObjectIdOrHexString, toObject } = require("mongoose");
+const { insertOne } = require("../../models/invite_link");
 
 module.exports = function (io, socket) {
-
   socket.on("send_message", async (data, cb) => {
     try {
-
-      const { type,content, conversationId } = data;
-      const senderId = socket.user._id;// chatUserId
+      const { type, content, conversationId, clientId } = data;
+      const senderId = socket.user._id; // chatUserId
 
       if (!content) {
         return cb?.({ success: false, message: "Message content required" });
@@ -22,15 +25,15 @@ module.exports = function (io, socket) {
         type,
         content,
         conversationId,
-        senderId
+        senderId,
       });
 
       await conversation.updateOne(
         { _id: conversationId },
         {
           lastMessageId: message._id,
-          lastMessageAt: new Date()
-        }
+          lastMessageAt: new Date(),
+        },
       );
       /*
       ==================================
@@ -41,11 +44,11 @@ module.exports = function (io, socket) {
       await conversationMember.updateMany(
         {
           conversationId,
-          userId: { $ne: senderId }
+          userId: { $ne: senderId },
         },
         {
-          $inc: { unreadCount: 1 }
-        }
+          $inc: { unreadCount: 1 },
+        },
       );
 
       /*
@@ -64,7 +67,8 @@ module.exports = function (io, socket) {
 
       socket.to(conversationId).emit("notification:newMessage", {
         conversationId,
-        message
+        message ,
+        clientId,
       });
 
       /*
@@ -73,18 +77,14 @@ module.exports = function (io, socket) {
       ==================================
       */
 
-      cb?.({ success: true, message });
-
+      cb?.({ success: true, message , clientId });
     } catch (error) {
-
       console.error("Message error:", error);
 
       cb?.({
         success: false,
-        message: "Message failed"
+        message: "Message failed",
       });
-
     }
   });
-
 };
