@@ -3,22 +3,39 @@
 import React, { useRef, useEffect, useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import MessageBubble from "./MessageBubble";
-import { fetchChats } from "../../../../store/chatSlice";
+import { fetchChats, updateLastRead } from "../../../../store/chatSlice";
+import { getSocket } from "../../../../socket/socket";
 
 export default function MessageList({ selectedConversation }) {
   const dispatch = useDispatch();
 
   const containerRef = useRef(null);
   const bottomRef = useRef(null);
-
+  const myId = useSelector((state) => state.auth.user?._id);
   const [cursor, setCursor] = useState(null);
   const [loadingMore, setLoadingMore] = useState(false);
-
+  const socket = getSocket();
   const messages = useSelector(
     (state) => state.chat.messages[selectedConversation] || [],
   );
 
   const loading = useSelector((state) => state.chat.loading);
+
+  useEffect(() => {
+    if (!selectedConversation || messages.length === 0) return;
+
+    const lastMessage = messages[messages.length - 1];
+
+    //  ONLY if message is from OTHER user
+    if (String(lastMessage.senderId) === String(myId)) return;
+
+    console.log("✅ emitting read_conversation");
+
+    socket.emit("read_conversation", {
+      conversationId: selectedConversation,
+      lastMessageId: lastMessage._id,
+    });
+  }, [selectedConversation, messages, myId]);
 
   // Load messages when conversation changes
   useEffect(() => {
@@ -35,7 +52,9 @@ export default function MessageList({ selectedConversation }) {
 
   // Auto scroll to bottom when new message comes
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (!loadingMore) {
+      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
   }, [messages]);
 
   // Pagination (scroll up)
@@ -77,7 +96,6 @@ export default function MessageList({ selectedConversation }) {
 
       {/* Message list */}
       {messages.map((msg) => (
-
         <MessageBubble key={msg.clientId || msg._id} msg={msg} />
       ))}
 

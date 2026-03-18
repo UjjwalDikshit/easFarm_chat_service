@@ -15,7 +15,7 @@ export const fetchChats = createAsyncThunk(
 const chatSlice = createSlice({
   name: "chat",
   initialState: {
-    conversations: [],
+    conversations: {},
     messages: {}, // { conversationId: [messages] }
     typing: {}, // { conversationId: { userId: true } }
   },
@@ -95,6 +95,20 @@ const chatSlice = createSlice({
         }
       });
     },
+
+    updateLastRead: (state, action) => {
+      const { conversationId, readerId, lastReadMessageId } = action.payload;
+
+      const convo = state.conversations[conversationId];
+      if (!convo) return;
+
+      if (!convo.members) convo.members = {};
+
+      convo.members[readerId] = {
+        ...(convo.members[readerId] || {}),
+        lastReadMessageId: String(lastReadMessageId),
+      };
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -105,7 +119,32 @@ const chatSlice = createSlice({
       .addCase(fetchChats.fulfilled, (state, action) => {
         state.loading = false;
 
-        const { conversationId, messages } = action.payload;
+        const { conversationId, messages, members } = action.payload;
+        /*
+        ==========================================
+        1. STORE MEMBERS (🔥 THIS WAS MISSING)
+        ==========================================
+        */
+
+        const membersMap = {};
+
+        members?.forEach((m) => {
+          membersMap[m.userId] = {
+            lastReadMessageId: m.lastReadMessageId
+              ? String(m.lastReadMessageId)
+              : null,
+          };
+        });
+
+        state.conversations[conversationId] = {
+          ...(state.conversations[conversationId] || {}),
+          members: membersMap,
+        };
+        /*
+        ==========================================
+        2. STORE MESSAGES (YOUR EXISTING LOGIC)
+        ==========================================
+        */
 
         if (!state.messages[conversationId]) {
           state.messages[conversationId] = [];
@@ -147,6 +186,7 @@ export const {
   clearTyping,
   replaceTempMessage,
   markMessageFailed,
+  updateLastRead,
 } = chatSlice.actions;
 
 export default chatSlice.reducer;

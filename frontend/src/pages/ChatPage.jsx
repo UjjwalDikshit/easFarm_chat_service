@@ -7,11 +7,13 @@ import ChatHeader from "./ChatPage/ChatSection/ChatHeader";
 import Sidebar from "./ChatPage/Sidebar/ConversationList/Sidebar";
 import MessageInput from "./ChatPage/ChatSection/MessageInput";
 import MessageList from "./ChatPage/ChatSection/MessageList/MessageList";
+import { markConversationReadOptimistic } from "../store/conversationSlice";
 
 export default function ChatPage() {
   const dispatch = useDispatch();
 
   const [selectedConversation, setSelectedConversation] = useState(null);
+  const myId = useSelector((state) => state.auth.user?._id);
 
   const conversation = useSelector(
     (state) => state.conversations.byId[selectedConversation],
@@ -29,6 +31,7 @@ export default function ChatPage() {
       socket.off("presence:update");
       socket.off("start_typing");
       socket.off("stop_typing");
+      socket.off("read_conversation");
     };
   }, [dispatch]);
 
@@ -38,11 +41,8 @@ export default function ChatPage() {
     const socket = getSocket();
     if (!socket || !selectedConversation) return;
 
-    
     const userIds =
-    conversation.type === "private"
-      ? [conversation.otherMember._id]
-      : [];
+      conversation.type === "private" ? [conversation.otherMember._id] : [];
 
     // join conversation for messages
     socket.emit("join_conversation", {
@@ -51,23 +51,27 @@ export default function ChatPage() {
 
     // subscribe to presence
     userIds.forEach((userId) => {
-      socket.emit("presence:subscribe", {userId});
+      socket.emit("presence:subscribe", { userId });
     });
 
     // check current presence
     // socket.emit("presence:check", { userIds });
 
+  
+    dispatch(markConversationReadOptimistic({ conversationId:selectedConversation }));
+    
     return () => {
       socket.emit("leave_conversation", {
         conversationId: conversation._id,
       });
 
       userIds.forEach((userId) => {
-        socket.emit("presence:unsubscribe", { user:[conversation.otherMember._id] });
+        socket.emit("presence:unsubscribe", {
+          user: [conversation.otherMember._id],
+        });
       });
     };
   }, [selectedConversation]);
-
 
   const auth = useSelector((state) => state.auth);
 

@@ -1,18 +1,18 @@
 const Message = require("../../models/message");
-const Conversation = require("../../models/conversation");
+const { conversationMember } = require("../../models/conversation");
 
 module.exports = function registerReadReceiptEvents(io, socket) {
-
   const readerId = socket.chatUserId.toString();
 
-  socket.on("conversation:read", async ({ conversationId }, callback) => {
-
+  socket.on("read_conversation", async (data, callback) => {
     try {
+      console.log("inside read_conversation1");
+      const { conversationId, lastMessageId } = data;
 
       if (!conversationId) {
         return callback?.({
           success: false,
-          message: "conversationId required"
+          message: "conversationId required",
         });
       }
 
@@ -22,78 +22,107 @@ module.exports = function registerReadReceiptEvents(io, socket) {
       ==========================================
       */
 
-      const exists = await Conversation.exists({
-        _id: conversationId
-      });
+      const member = await conversationMember
+        .findOne({
+          conversationId,
+          userId: readerId,
+        })
+        .select("_id lastReadMessageId");
 
-      if (!exists) {
+      if (!member) {
         return callback?.({
           success: false,
-          message: "Conversation not found"
+          message: "Access denied",
+        });
+      }
+
+      console.log("inside read_conversation1.2");
+      /*
+      ==========================================
+      GET LAST MESSAGE (ONLY IF NOT PROVIDED)
+      ==========================================
+      */
+
+      let latestMessageId = lastMessageId.toString() || null;
+
+      if (!latestMessageId) {
+        const lastMessage = await Message.findOne({
+          conversationId,
+          deletedGlobally: false,
+        })
+          .sort({ createdAt: -1 })
+          .select("_id");
+
+        latestMessageId = lastMessage?._id ||null;
+      }
+
+      if (!latestMessageId) {
+        return callback?.({
+          success: true,
+          message: "No messages to mark as read",
+        });
+      }
+
+      console.log("inside read_conversation2", lastMessageId);
+      /*
+      ==========================================
+      AVOID UNNECESSARY UPDATE
+      ==========================================
+      */
+
+      if (
+        member.lastReadMessageId &&
+        member.lastReadMessageId.toString() === latestMessageId.toString()
+      ) {
+        console.log("alerady up to date");
+        return callback?.({
+          success: true,
+          message: "Already up to date",
         });
       }
 
       /*
       ==========================================
-      UPDATE MESSAGE READ STATUS
+      UPDATE READ STATE (O(1))
       ==========================================
       */
 
-      const result = await Message.updateMany(
+      console.log("inside read_conversation3");
+      await conversationMember.updateOne(
         {
-          conversationId,
-          senderId: { $ne: readerId },
-          readBy: { $ne: readerId },
-          deletedGlobally: false
+          _id: member._id,
         },
         {
-          $addToSet: { readBy: readerId }
-        }
+          $set: {
+            lastReadMessageId: latestMessageId,
+            unreadCount: 0,
+          },
+        },
       );
 
       /*
       ==========================================
-      RESET UNREAD COUNT
+      EMIT READ EVENT (FOR BLUE TICKS)
       ==========================================
       */
+      console.log("inside read_conversation4");
 
-      await Conversation.updateOne(
-        {
-          _id: conversationId,
-          "participants.userId": readerId
-        },
-        {
-          $set: { "participants.$.unreadCount": 0 }
-        }
-      );
-
-      /*
-      ==========================================
-      EMIT READ EVENT
-      ==========================================
-      */
-
-      io.to(`conversation:${conversationId}`).emit("conversation:read", {
+      io.to(`conversation:${conversationId}`).emit("read_conversation", {
         conversationId,
-        readerId
+        readerId,
+        lastReadMessageId: latestMessageId.toString(), // ✅ FIX
       });
 
       callback?.({
         success: true,
-        readCount: result.modifiedCount
       });
-
     } catch (error) {
-
       console.error("Read receipt error:", error);
 
       callback?.({
         success: false,
-        message: "Failed to mark as read"
+        message: "Failed to mark as read",
       });
-
     }
-
   });
-
 };

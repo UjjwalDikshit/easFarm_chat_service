@@ -1,4 +1,5 @@
 const Message = require("../models/message");
+const {conversationMember} = require('../../src/models/conversation')
 
 const getAllMessageOfConversation = async (req, res) => {
   try {
@@ -29,10 +30,15 @@ const getAllMessageOfConversation = async (req, res) => {
       .limit(LIMIT)
       .lean();
 
+      const members = await conversationMember.find({
+        conversationId
+      }).select("userId lastReadMessageId");
+
     return res.status(200).json({
       success: true,
       count: messages.length,
       messages,
+      members,
       nextCursor:
         messages.length > 0 ? messages[messages.length - 1].createdAt : null,
     });

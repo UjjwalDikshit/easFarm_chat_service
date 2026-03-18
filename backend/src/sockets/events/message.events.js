@@ -32,7 +32,7 @@ module.exports = function (io, socket) {
         { _id: conversationId },
         {
           lastMessageId: message._id,
-          lastMessageAt: new Date(),
+          lastMessageAt: message.createdAt,
         },
       );
       /*

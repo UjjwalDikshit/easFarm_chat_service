@@ -1,5 +1,4 @@
 const registerMessageEvents = require("./events/message.events");
-const registerGroupEvents = require("./events/group.events");
 const registerPresenceEvents = require("./events/presence.events");
 const registerTypingEvents = require("./events/typing.events");
 const registerReadReceiptEvents = require("./events/readreciept.events");
@@ -23,10 +22,9 @@ module.exports = function (io) {
     socket.join(`user:${socket.chatUserId}`);
 
     registerMessageEvents(io, socket);
-    // registerGroupEvents(io, socket);
     // registerPresenceEvents(io, socket);
-    registerTypingEvents(io, socket, typingUsers);
-    // registerReadReceiptEvents(io, socket);
+    // registerTypingEvents(io, socket, typingUsers);
+    registerReadReceiptEvents(io, socket);
     registerConversationEvents(io, socket);
     // registerNotificationEvents(io, socket);
 

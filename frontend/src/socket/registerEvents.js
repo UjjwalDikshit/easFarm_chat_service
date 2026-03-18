@@ -4,11 +4,11 @@ import { getSocket } from "./socket";
 import { addMessage, clearTyping, setTyping } from "../store/chatSlice";
 import { setPresence, setBulkPresence } from "../store/presenceSlice";
 import { updateLastMessage } from "../store/conversationSlice";
+import { updateLastRead } from "../store/chatSlice";
+import { useSelector } from "react-redux";
 
 export const registerSocketEvents = (dispatch) => {
   const socket = getSocket();
-
-  if (!socket) return;
 
   // When connected
   socket.on("connect", () => {
@@ -20,8 +20,9 @@ export const registerSocketEvents = (dispatch) => {
       addMessage({
         ...message,
         senderId: String(message.senderId),
-      }));
-      dispatch(updateLastMessage(message));
+      }),
+    );
+    dispatch(updateLastMessage(message));
   });
 
   socket.on("user_online", (userId) => {
@@ -46,5 +47,10 @@ export const registerSocketEvents = (dispatch) => {
   });
   socket.on("presence:update", ({ userId, online }) => {
     dispatch(setPresence({ userId, online }));
+  });
+
+  socket.on("read_conversation", (data) => {
+    console.log("READ EVENT RECEIVED", data); // 👈 ADD THIS
+    dispatch(updateLastRead(data));
   });
 };

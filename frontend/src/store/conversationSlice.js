@@ -28,6 +28,16 @@ const conversationSlice = createSlice({
       conv.lastMessage = message;
       conv.lastMessageAt = message.createdAt;
     },
+
+    markConversationReadOptimistic: (state, action) => {
+      const { conversationId } = action.payload;
+
+      const convo = state.byId[conversationId];
+      console.log(convo);
+      if (!convo) return;
+
+      convo.unreadCount = 0; // instant UI update
+    },
   },
 
   extraReducers: (builder) => {
@@ -58,5 +68,5 @@ const conversationSlice = createSlice({
   },
 });
 
-export const { updateLastMessage } = conversationSlice.actions;
+export const { updateLastMessage , markConversationReadOptimistic} = conversationSlice.actions;
 export default conversationSlice.reducer;
