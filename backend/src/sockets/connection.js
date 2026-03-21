@@ -24,7 +24,7 @@ module.exports = function (io) {
     registerMessageEvents(io, socket);
     // registerPresenceEvents(io, socket);
     // registerTypingEvents(io, socket, typingUsers);
-    registerReadReceiptEvents(io, socket);
+    // registerReadReceiptEvents(io, socket);
     registerConversationEvents(io, socket);
     // registerNotificationEvents(io, socket);
 

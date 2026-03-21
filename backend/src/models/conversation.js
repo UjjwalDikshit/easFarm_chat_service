@@ -70,7 +70,13 @@ conversationSchema.index({ lastMessageAt: -1 });
 // 🔥 Prevent duplicate private chats
 conversationSchema.index(
   { type: 1, privateKey: 1 },
-  { unique: true, sparse: true },
+  {
+    unique: true,
+    partialFilterExpression: {
+      type: "private",
+      privateKey: { $exists: true }
+    }
+  }
 );
 
 const conversation = mongoose.model("Conversation", conversationSchema);
@@ -120,7 +126,7 @@ conversationMemberSchema.index(
   { conversationId: 1, userId: 1 },
   { unique: true },
 );
-
+conversationMemberSchema.index({ conversationId: 1 });
 // 🔥 Get all conversations of a user quickly
 conversationMemberSchema.index({ userId: 1 });
 

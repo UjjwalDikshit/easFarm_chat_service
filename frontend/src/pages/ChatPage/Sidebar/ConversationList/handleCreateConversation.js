@@ -1,0 +1,130 @@
+import { axiosClient } from "../../../../utils/axiosClient";
+import { getSocket } from "../../../../socket/socket";
+import createConversationAPI from "./createConversationAPI";
+
+import {
+  addConversation,
+  replaceConversation,
+  removeConversation,
+} from "../../../../store/conversationSlice";
+
+export const handleCreateConversation = async ({
+  data,
+  dispatch,
+  setSelectedConversation,
+  setShowModal,
+}) => {
+  const socket = getSocket();
+  const tempId = "temp-" + Date.now();
+
+  /*
+  ==========================
+  🚨 VALIDATION
+  ==========================
+  */
+
+  if (data.type === "private" && (!data.members || data.members.length !== 1)) {
+    alert("Select exactly 1 user");
+    return;
+  }
+
+  if (
+    data.type === "private-group" &&
+    (!data.members || data.members.length === 0)
+  ) {
+    alert("Add at least 1 member");
+    return;
+  }
+
+  if (data.type !== "private" && (!data.name || data.name.trim().length < 3)) {
+    alert("Group name must be at least 3 characters");
+    return;
+  }
+
+  /*
+  ==========================
+  1️⃣ OPTIMISTIC ADD
+  ==========================
+  */
+
+  dispatch(
+    addConversation({
+      _id: tempId,
+      type: data.type,
+      name: data.type === "private" ? data.members[0] : data.name,
+      otherMember: data.type === "private" ? { name: data.members[0] } : null,
+
+      isTemp: true,
+      lastMessage: null,
+      lastMessageAt: new Date().toISOString(),
+
+      unreadCount: 0,
+      role: "admin", // ✅ add this
+    }),
+  );
+
+  /*
+  ==========================
+  2️⃣ OPEN TEMP CHAT
+  ==========================
+  */
+
+  setSelectedConversation(tempId);
+  setShowModal(false);
+
+  try {
+    /*
+    ==========================
+    3️⃣ API CALL
+    ==========================
+    */
+
+    const res = await createConversationAPI(data);
+
+    const realConv = res.data.data.conversation;
+
+    /*
+    ==========================
+    4️⃣ REPLACE TEMP
+    ==========================
+    */
+
+    dispatch(
+      replaceConversation({
+        tempId,
+        conversation: realConv,
+      }),
+    );
+
+    /*
+    ==========================
+    5️⃣ JOIN SOCKET
+    ==========================
+    */
+
+    if (socket) {
+  socket.emit("join_conversation", {
+    conversationId: realConv._id,
+  });
+}
+    /*
+    ==========================
+    6️⃣ OPEN REAL CHAT
+    ==========================
+    */
+
+    setSelectedConversation(realConv._id);
+  } catch (err) {
+    console.error("Create conversation error:", err);
+
+    /*
+    ==========================
+    ❌ ROLLBACK
+    ==========================
+    */
+
+    dispatch(removeConversation(tempId));
+
+    alert(err.response?.data?.error || "Failed to create conversation");
+  }
+};

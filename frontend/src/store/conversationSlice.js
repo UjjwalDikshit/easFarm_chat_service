@@ -5,9 +5,8 @@ export const fetchConversations = createAsyncThunk(
   "conversations/fetch",
   async () => {
     return await fetchConversationsAPI();
-  }
+  },
 );
-
 
 const conversationSlice = createSlice({
   name: "conversations",
@@ -27,6 +26,11 @@ const conversationSlice = createSlice({
 
       conv.lastMessage = message;
       conv.lastMessageAt = message.createdAt;
+
+      state.allIds = [
+        message.conversationId,
+        ...state.allIds.filter((id) => id !== message.conversationId),
+      ];
     },
 
     markConversationReadOptimistic: (state, action) => {
@@ -37,6 +41,39 @@ const conversationSlice = createSlice({
       if (!convo) return;
 
       convo.unreadCount = 0; // instant UI update
+    },
+    updateConversation: (state, action) => {
+      const { conversationId, changes } = action.payload;
+
+      const convo = state.byId[conversationId];
+      if (!convo) return;
+
+      Object.assign(convo, changes);
+    },
+    removeConversation: (state, action) => {
+      const conversationId = action.payload;
+
+      delete state.byId[conversationId];
+      state.allIds = state.allIds.filter((id) => id !== conversationId);
+    },
+    addConversation: (state, action) => {
+      const conv = action.payload;
+
+      if (state.byId[conv._id]) return;
+
+      state.byId[conv._id] = conv;
+      state.allIds.unshift(conv._id);
+    },
+    replaceConversation: (state, action) => {
+      const { tempId, conversation } = action.payload;
+
+      delete state.byId[tempId];
+
+      state.byId[conversation._id] = conversation;
+
+      state.allIds = state.allIds.map((id) =>
+        id === tempId ? conversation._id : id,
+      );
     },
   },
 
@@ -68,5 +105,12 @@ const conversationSlice = createSlice({
   },
 });
 
-export const { updateLastMessage , markConversationReadOptimistic} = conversationSlice.actions;
+export const {
+  updateLastMessage,
+  removeConversation,
+  updateConversation,
+  markConversationReadOptimistic,
+  addConversation,
+  replaceConversation,
+} = conversationSlice.actions;
 export default conversationSlice.reducer;

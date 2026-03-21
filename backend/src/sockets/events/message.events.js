@@ -17,6 +17,45 @@ module.exports = function (io, socket) {
       }
 
       /*
+    ==================================
+    0️⃣ FETCH CONVERSATION + VALIDATION
+    ==================================
+    */
+
+      const convo = await conversation.findById(conversationId);
+
+      if (!convo) {
+        return cb?.({
+          success: false,
+          message: "Conversation not found",
+        });
+      }
+
+      /*
+    🔥 BLOCK CHECK (THIS IS WHERE IT GOES)
+    */
+      if (convo.type === "private" && convo.isBlocked) {
+        return cb?.({
+          success: false,
+          message: "Conversation is blocked",
+        });
+      }
+
+      /*
+    OPTIONAL: Ensure sender is member
+    */
+      const isMember = await conversationMember.findOne({
+        conversationId,
+        userId: senderId,
+      });
+
+      if (!isMember) {
+        return cb?.({
+          success: false,
+          message: "Not part of this conversation",
+        });
+      }
+      /*
       ==================================
       1️⃣ CREATE MESSAGE
       ==================================
@@ -65,11 +104,13 @@ module.exports = function (io, socket) {
       ==================================
       */
 
-      socket.to(`conversation:${conversationId}`).emit("notification:newMessage", {
-        conversationId,
-        message ,
-        clientId,
-      });
+      socket
+        .to(`conversation:${conversationId}`)
+        .emit("notification:newMessage", {
+          conversationId,
+          message,
+          clientId,
+        });
 
       /*
       ==================================
@@ -77,7 +118,7 @@ module.exports = function (io, socket) {
       ==================================
       */
 
-      cb?.({ success: true, message , clientId });
+      cb?.({ success: true, message, clientId });
     } catch (error) {
       console.error("Message error:", error);
 

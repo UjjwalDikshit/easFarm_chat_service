@@ -32,6 +32,11 @@ export default function ChatPage() {
       socket.off("start_typing");
       socket.off("stop_typing");
       socket.off("read_conversation");
+      socket.off("member_added");
+      socket.off("member_removed");
+      socket.off("member_left");
+      socket.off("conversation_blocked");
+      socket.off("conversation_unblocked");
     };
   }, [dispatch]);
 
@@ -57,9 +62,10 @@ export default function ChatPage() {
     // check current presence
     // socket.emit("presence:check", { userIds });
 
-  
-    dispatch(markConversationReadOptimistic({ conversationId:selectedConversation }));
-    
+    dispatch(
+      markConversationReadOptimistic({ conversationId: selectedConversation }),
+    );
+
     return () => {
       socket.emit("leave_conversation", {
         conversationId: conversation._id,

@@ -50,7 +50,43 @@ export const registerSocketEvents = (dispatch) => {
   });
 
   socket.on("read_conversation", (data) => {
-    console.log("READ EVENT RECEIVED", data); // 👈 ADD THIS
+    console.log("READ EVENT RECEIVED", data);
     dispatch(updateLastRead(data));
+  });
+
+  socket.on("member_added", ({ conversationId, members }) => {
+    dispatch(addMembersRealtime({ conversationId, members }));
+  });
+
+  socket.on("member_removed", ({ conversationId, userId }) => {
+    dispatch(removeMemberRealtime({ conversationId, userId }));
+
+    if (userId === currentUserId()) {
+      dispatch(removeConversation(conversationId));
+    }
+  });
+  socket.on("member_left", ({ conversationId, userId }) => {
+    dispatch(removeMemberRealtime({ conversationId, userId }));
+    if (userId === currentUserId()) {
+      dispatch(removeConversation(conversationId));
+    }
+  });
+
+  socket.on("conversation_blocked", ({ conversationId, blockedBy }) => {
+    dispatch(
+      updateConversation({
+        conversationId,
+        changes: { isBlocked: true, blockedBy },
+      }),
+    );
+  });
+
+  socket.on("conversation_unblocked", ({ conversationId }) => {
+    dispatch(
+      updateConversation({
+        conversationId,
+        changes: { isBlocked: false, blockedBy: null },
+      }),
+    );
   });
 };
