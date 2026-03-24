@@ -101,9 +101,10 @@ const createConversation = async (req, res) => {
           .session(session);
 
         let membership;
-
+        let newCreated = conv; // tell me at postman what is duplicate private chat created or previous returned
         if (!conv) {
           try {
+            console.log('for creating new conversation');
             [conv] = await conversation.create(
               [
                 {

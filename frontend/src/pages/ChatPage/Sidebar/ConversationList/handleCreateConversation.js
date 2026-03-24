@@ -41,6 +41,26 @@ export const handleCreateConversation = async ({
     return;
   }
 
+  // first here check is conversation for private chat, for this private key exist;
+  // CHECK EXISTING PRIVATE CHAT
+  if (data.type === "private") {
+    const state = dispatch((_, getState) => getState());
+    const conversations = state.conversations.byId;
+
+    const existingConv = Object.values(conversations).find((conv) => {
+      return (
+        conv.type === "private" && conv.otherMember?.uniqueId === data.members[0]
+      );
+    });
+
+    if (existingConv) {
+      console.log("yes found already existed conversation");
+      setSelectedConversation(existingConv._id);
+      setShowModal(false);
+
+      return; // 🚫 STOP HERE (NO API CALL)
+    }
+  }
   /*
   ==========================
   1️⃣ OPTIMISTIC ADD
@@ -52,7 +72,10 @@ export const handleCreateConversation = async ({
       _id: tempId,
       type: data.type,
       name: data.type === "private" ? data.members[0] : data.name,
-      otherMember: data.type === "private" ? { name: data.members[0] } : null,
+      otherMember:
+        data.type === "private"
+          ? { uniqueId: data.members[0], name: data.members[0] }
+          : null,
 
       isTemp: true,
       lastMessage: null,
@@ -103,10 +126,10 @@ export const handleCreateConversation = async ({
     */
 
     if (socket) {
-  socket.emit("join_conversation", {
-    conversationId: realConv._id,
-  });
-}
+      socket.emit("join_conversation", {
+        conversationId: realConv._id,
+      });
+    }
     /*
     ==========================
     6️⃣ OPEN REAL CHAT
