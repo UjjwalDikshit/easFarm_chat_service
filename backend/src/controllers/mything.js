@@ -6,7 +6,6 @@ async function myThing(req, res) {
     const userId = req.user._id;
 
     const conversations = await conversationMember.aggregate([
-      
       // 1️ Find all conversations where current user is a member
       {
         $match: { userId: new mongoose.Types.ObjectId(userId) },
@@ -122,6 +121,17 @@ async function myThing(req, res) {
           preserveNullAndEmptyArrays: true,
         },
       },
+      {// send role of member in output
+        $addFields: {
+          admins: {
+            $filter: {
+              input: "$members",
+              as: "m",
+              cond: { $eq: ["$$m.role", "admin"] },
+            },
+          },
+        },
+      },
 
       // 8️ Sort conversations by last activity
       {
@@ -141,7 +151,6 @@ async function myThing(req, res) {
       success: true,
       conversations,
     });
-
   } catch (error) {
     res.status(500).json({
       success: false,

@@ -1,4 +1,7 @@
-const { conversation: Conversation,conversationMember:ConversationMember } = require("../../models/conversation");
+const {
+  conversation: Conversation,
+  conversationMember: ConversationMember,
+} = require("../../models/conversation");
 const mongoose = require("mongoose");
 const user = require("../../models/user");
 
@@ -155,13 +158,20 @@ function registerConversationEvents(io, socket) {
       const convo = await Conversation.findById(conversationId).lean();
       if (!convo) return;
 
-      const membership = await ConversationMember.findOne({
+      const membership = await ConversationMember.findOneAndUpdate(
+      {
         conversationId,
         userId: new mongoose.Types.ObjectId(chatUserId),
-      });
+      },
+      {
+        $set: { unreadCount: 0 },
+      },
+      { new: true }
+    );
 
-      if (!membership) return;
-      console.log('user has joined ',conversationId);
+    if (!membership) return;
+
+      console.log("user has joined ", conversationId);
       socket.join(`conversation:${conversationId}`);
     } catch (err) {
       console.error("Join error:", err);

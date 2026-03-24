@@ -64,10 +64,10 @@ const conversationSchema = new mongoose.Schema(
   },
 );
 
-// 🔥 Fast sorting for chat list
+// Fast sorting for chat list
 conversationSchema.index({ lastMessageAt: -1 });
 
-// 🔥 Prevent duplicate private chats
+//  Prevent duplicate private chats
 conversationSchema.index(
   { type: 1, privateKey: 1 },
   {
