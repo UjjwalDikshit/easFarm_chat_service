@@ -1,11 +1,18 @@
 const InviteLink = require("../models/invite_link");
+const User = require("../models/user"); // make sure this exists
+
 const { conversationMember, conversation } = require("../models/conversation");
+const { getSocket } = require("../../../frontend/src/socket/socket");
+
+const io = getSocket();
 
 const MAX_GROUP_MEMBERS = 100;
 
 const joinViaInvite = async (req, res) => {
   try {
+    console.log("inside");
     const userId = req.user._id.toString();
+    console.log(userId);
     const { code } = req.body;
 
     if (!code) {
@@ -51,7 +58,7 @@ const joinViaInvite = async (req, res) => {
       });
     }
 
-    // 🔥 MEMBER LIMIT CHECK
+    //  MEMBER LIMIT CHECK
     const currentCount = await conversationMember.countDocuments({
       conversationId: convo._id,
     });
@@ -84,30 +91,65 @@ const joinViaInvite = async (req, res) => {
   }
 };
 
-const addMembers = async (req, res) => {
+
+const addMember = async (req, res) => {
   try {
     const adminId = req.user._id.toString();
-    const { conversationId, members } = req.body;
+    const { conversationId, uniqueId } = req.body;
 
-    if (!conversationId || !Array.isArray(members)) {
+    /*
+    ==========================
+    1. VALIDATION
+    ==========================
+    */
+    console.log(conversationId, uniqueId);
+
+    if (!conversationId || !uniqueId) {
       return res.status(400).json({
-        error: "Invalid payload",
+        error: "conversationId and uniqueId are required",
       });
     }
 
-    if (members.length === 0) {
-      return res.status(400).json({
-        error: "Members array empty",
+    /*
+    ==========================
+    2. FIND USER BY UNIQUE ID
+    ==========================
+    */
+    const user = await User.findOne({ uniqueId });
+
+    if (!user) {
+      return res.status(404).json({
+        error: "User not found",
       });
     }
 
+    const memberId = user._id.toString();
+
+    // prevent adding yourself
+    if (memberId === adminId) {
+      return res.status(400).json({
+        error: "Cannot add yourself",
+      });
+    }
+
+    /*
+    ==========================
+    3. CHECK GROUP
+    ==========================
+    */
     const convo = await conversation.findById(conversationId);
 
     if (!convo || convo.type !== "private-group") {
-      return res.status(400).json({ error: "Invalid group" });
+      return res.status(400).json({
+        error: "Invalid group",
+      });
     }
 
-    // Check admin
+    /*
+    ==========================
+    4. CHECK ADMIN
+    ==========================
+    */
     const isAdmin = await conversationMember.findOne({
       conversationId,
       userId: adminId,
@@ -120,83 +162,79 @@ const addMembers = async (req, res) => {
       });
     }
 
-    // Remove duplicates + invalid
-    let uniqueMembers = [
-      ...new Set(
-        members
-          .map((id) => id.toString())
-          .filter((id) => id !== adminId) // avoid re-adding admin
-      ),
-    ];
-
-    if (uniqueMembers.length === 0) {
-      return res.status(400).json({
-        error: "No valid members to add",
-      });
-    }
-
-    // Remove already existing members
-    const existingMembers = await conversationMember.find({
+    /*
+    ==========================
+    5. CHECK IF ALREADY MEMBER
+    ==========================
+    */
+    const exists = await conversationMember.findOne({
       conversationId,
-      userId: { $in: uniqueMembers },
-    }).select("userId");
+      userId: memberId,
+    });
 
-    const existingIds = new Set(
-      existingMembers.map((m) => m.userId.toString())
-    );
-
-    const newMembers = uniqueMembers.filter(
-      (id) => !existingIds.has(id)
-    );
-
-    if (newMembers.length === 0) {
-      return res.json({
-        success: true,
-        message: "All users already members",
+    if (exists) {
+      return res.status(400).json({
+        error: "User already a member",
       });
     }
 
-    // 🔥 MEMBER LIMIT CHECK
-    const currentCount = await conversationMember.countDocuments({
+    /*
+    ==========================
+    6. MEMBER LIMIT CHECK
+    ==========================
+    */
+    const count = await conversationMember.countDocuments({
       conversationId,
     });
 
-    if (currentCount + newMembers.length > MAX_GROUP_MEMBERS) {
+    if (count >= MAX_GROUP_MEMBERS) {
       return res.status(400).json({
-        error: `Adding exceeds group limit (${MAX_GROUP_MEMBERS})`,
+        error: "Group member limit reached",
       });
     }
 
-    // Insert members
-    const docs = newMembers.map((userId) => ({
+    /*
+    ==========================
+    7. ADD MEMBER
+    ==========================
+    */
+    await conversationMember.create({
       conversationId,
-      userId,
+      userId: memberId,
       role: "member",
       joinedAt: new Date(),
-    }));
-
-    await conversationMember.insertMany(docs, {
-      ordered: false, // ignore duplicates safely
     });
 
-    
-    // EMIT EVENT
+    /*
+    ==========================
+    8. SOCKET EVENT
+    ==========================
+    */
     io.to(`conversation:${conversationId}`).emit("member_added", {
       conversationId,
-      members: docs.map(m => m.userId),
+      members: [memberId], // keep same structure
     });
 
+    /*
+    ==========================
+    9. RESPONSE
+    ==========================
+    */
     return res.json({
       success: true,
-      message: "Members added successfully",
-      addedCount: docs.length,
+      message: "Member added successfully",
+      user: {
+        _id: user._id,
+        name: user.name,
+        unique_id: user.unique_id,
+      },
     });
 
   } catch (err) {
-    console.error("Add members error:", err);
-    res.status(500).json({
-      error: "Failed to add members",
+    console.error("Add member error:", err);
+    return res.status(500).json({
+      error: "Failed to add member",
     });
   }
 };
-module.exports = {addMembers,joinViaInvite};
+module.exports = {addMember,joinViaInvite};

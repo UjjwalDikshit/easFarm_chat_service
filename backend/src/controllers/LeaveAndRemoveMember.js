@@ -145,26 +145,26 @@ const removeMember = async (req, res) => {
   }
 };
 
-const promoteToAdmin = async (req, res) => {
-  const adminId = req.user._id.toString();
-  const { conversationId, memberId } = req.body;
+// const promoteToAdmin = async (req, res) => {
+//   const adminId = req.user._id.toString();
+//   const { conversationId, memberId } = req.body;
 
-  const isAdmin = await conversationMember.findOne({
-    conversationId,
-    userId: adminId,
-    role: "admin",
-  });
+//   const isAdmin = await conversationMember.findOne({
+//     conversationId,
+//     userId: adminId,
+//     role: "admin",
+//   });
 
-  if (!isAdmin) {
-    return res.status(403).json({ error: "Only admin allowed" });
-  }
+//   if (!isAdmin) {
+//     return res.status(403).json({ error: "Only admin allowed" });
+//   }
 
-  await conversationMember.updateOne(
-    { conversationId, userId: memberId },
-    { $set: { role: "admin" } },
-  );
+//   await conversationMember.updateOne(
+//     { conversationId, userId: memberId },
+//     { $set: { role: "admin" } },
+//   );
 
-  res.json({ success: true });
-};
+//   res.json({ success: true });
+// };
 
-module.exports = { leaveGroup, removeMember, promoteToAdmin };
+module.exports = { leaveGroup, removeMember };

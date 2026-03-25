@@ -4,6 +4,8 @@ import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { handleCreateConversation } from "./handleCreateConversation";
 import { fetchConversations } from "../../../../store/conversationSlice";
+import { handleJoinViaInvite } from "./handleJoinViaInvite";
+
 import {
   addConversation,
   replaceConversation,
@@ -13,6 +15,7 @@ import {
 import ConversationCard from "./ConversationCard";
 import CreateConversation from "./ConversationItem";
 import CreateConversationModal from "./CreateConversationModel";
+import JoinConversationModal from "./JoinConversationModal";
 
 import { axiosClient } from "../../../../utils/axiosClient";
 import { getSocket } from "../../../../socket/socket";
@@ -27,7 +30,7 @@ export default function Sidebar({
   const { byId, allIds, loading } = useSelector((state) => state.conversations);
 
   const [showModal, setShowModal] = useState(false);
-
+  const [showJoinModal, setShowJoinModal] = useState(false);
   const conversations = allIds.map((id) => byId[id]);
 
   /*
@@ -50,6 +53,26 @@ export default function Sidebar({
       <div className="h-16 flex items-center px-4 border-b font-semibold text-lg">
         Chats
       </div>
+
+      <button
+        className="bg-green-500 text-white px-3 py-1 rounded mb-2"
+        onClick={() => setShowJoinModal(true)}
+      >
+        Join via Invite
+      </button>
+      {showJoinModal && (
+        <JoinConversationModal
+          onClose={() => setShowJoinModal(false)}
+          onSubmit={(inviteCode) =>
+            handleJoinViaInvite({
+              inviteCode,
+              dispatch,
+              setSelectedConversation,
+              setShowJoinModal,
+            })
+          }
+        />
+      )}
 
       {/* CREATE BUTTON */}
       <CreateConversation onCreate={() => setShowModal(true)} />
