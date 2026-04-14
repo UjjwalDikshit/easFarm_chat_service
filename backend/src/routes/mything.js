@@ -8,7 +8,6 @@ const { leaveGroup, removeMember } = require("../controllers/LeaveAndRemoveMembe
 // POST /user/grp/create
 router.get("/fetch",authMiddleware, getUserConversations);
 router.get("/getUserConversation",getAllMessageOfConversation);//authMiddleware
-router.get("/user/leaveGroup",leaveGroup);
 router.get("/user/removeMember",removeMember);
 
 module.exports = router;

@@ -1,16 +1,28 @@
+const { getIO } = require("../config/socket");
 const { conversation, conversationMember } = require("../models/conversation");
 
 const leaveGroup = async (req, res) => {
   try {
-    const userId = req.user._id.toString();
-    const { conversationId } = req.params;
+    const io = getIO();
 
+    const userId = req.user._id.toString();
+    const { conversationId } = req.query;
+    /*
+    ==========================
+    1. VALIDATE CONVERSATION
+    ==========================
+    */
     const convo = await conversation.findById(conversationId);
 
     if (!convo || !["private-group", "free-group"].includes(convo.type)) {
-      return res.status(400).json({ error: "Invalid group" });
+      return res.status(400).json({ error: "Invalid group",convo });
     }
 
+    /*
+    ==========================
+    2. CHECK MEMBERSHIP
+    ==========================
+    */
     const member = await conversationMember.findOne({
       conversationId,
       userId,
@@ -20,45 +32,68 @@ const leaveGroup = async (req, res) => {
       return res.status(400).json({ error: "Not a member" });
     }
 
-    // 🔥 If admin → check if last admin
+    /*
+    ==========================
+    3. ADMIN LOGIC
+    ==========================
+    */
     if (member.role === "admin") {
       const adminCount = await conversationMember.countDocuments({
         conversationId,
         role: "admin",
       });
 
+      //  LAST ADMIN → DELETE GROUP
       if (adminCount === 1) {
-        // Check total members
-        const totalMembers = await conversationMember.countDocuments({
-          conversationId,
+        const members = await conversationMember.find({ conversationId });
+
+        // delete group
+        await conversation.deleteOne({ _id: conversationId });
+        await conversationMember.deleteMany({ conversationId });
+
+        /*
+        ==========================
+        SOCKET: REMOVE FOR ALL USERS
+        ==========================
+        */
+        members.forEach((m) => {
+          io.to(`user:${m.userId}`).emit("conversation_removed", {
+            conversationId,
+          });
         });
 
-        if (totalMembers === 1) {
-          // Last person → delete group
-          await conversation.deleteOne({ _id: conversationId });
-          await conversationMember.deleteMany({ conversationId });
-
-          return res.json({
-            success: true,
-            message: "Group deleted (last member left)",
-          });
-        }
-
-        return res.status(400).json({
-          error: "You are the only admin. Assign another admin before leaving.",
+        return res.json({
+          success: true,
+          message: "Group deleted successfully",
         });
       }
     }
 
-    // Remove user
+    /*
+    ==========================
+    4. NORMAL LEAVE
+    ==========================
+    */
     await conversationMember.deleteOne({
       conversationId,
       userId,
     });
 
+    /*
+    ==========================
+    5. SOCKET EVENTS
+    ==========================
+    */
+
+    // notify remaining members
     io.to(`conversation:${conversationId}`).emit("member_left", {
       conversationId,
       userId,
+    });
+
+    // notify leaving user → remove from UI
+    io.to(`user:${userId}`).emit("conversation_removed", {
+      conversationId,
     });
 
     return res.json({
@@ -66,10 +101,14 @@ const leaveGroup = async (req, res) => {
       message: "Left group successfully",
     });
   } catch (err) {
-    console.error("Leave group error:", err);
-    res.status(500).json({ error: "Failed to leave group" });
+    console.error("Leave group error:", err.stack);
+    return res.status(500).json({
+      error: "Failed to leave group",
+    });
   }
 };
+
+
 
 const removeMember = async (req, res) => {
   try {
