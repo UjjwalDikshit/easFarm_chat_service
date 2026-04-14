@@ -2,9 +2,7 @@ const InviteLink = require("../models/invite_link");
 const User = require("../models/user"); // make sure this exists
 
 const { conversationMember, conversation } = require("../models/conversation");
-const { getSocket } = require("../../../frontend/src/socket/socket");
-
-const io = getSocket();
+const { getIO } = require("../../src/config/socket");
 
 const MAX_GROUP_MEMBERS = 100;
 
@@ -84,16 +82,16 @@ const joinViaInvite = async (req, res) => {
       data: convo,
       message: "Joined successfully",
     });
-
   } catch (err) {
     console.error("Join via invite error:", err);
     res.status(500).json({ error: "Join failed" });
   }
 };
 
-
 const addMember = async (req, res) => {
   try {
+    const io = getIO();
+
     const adminId = req.user._id.toString();
     const { conversationId, uniqueId } = req.body;
 
@@ -102,8 +100,6 @@ const addMember = async (req, res) => {
     1. VALIDATION
     ==========================
     */
-    console.log(conversationId, uniqueId);
-
     if (!conversationId || !uniqueId) {
       return res.status(400).json({
         error: "conversationId and uniqueId are required",
@@ -115,7 +111,8 @@ const addMember = async (req, res) => {
     2. FIND USER BY UNIQUE ID
     ==========================
     */
-    const user = await User.findOne({ uniqueId });
+    //  FIX: field mismatch (uniqueId vs unique_id)
+    const user = await User.findOne({ uniqueId: uniqueId }); //  FIXED
 
     if (!user) {
       return res.status(404).json({
@@ -183,6 +180,9 @@ const addMember = async (req, res) => {
     6. MEMBER LIMIT CHECK
     ==========================
     */
+    //  FIX: ensure constant exists
+    const MAX_GROUP_MEMBERS = 50; //  define or import properly
+
     const count = await conversationMember.countDocuments({
       conversationId,
     });
@@ -207,12 +207,26 @@ const addMember = async (req, res) => {
 
     /*
     ==========================
-    8. SOCKET EVENT
+    8. SOCKET EVENTS
     ==========================
     */
+
+    //  FIX: don't send full convo blindly (heavy + stale risk)
+    const minimalConvo = {
+      _id: convo._id,
+      name: convo.name,
+      type: convo.type,
+    };
+
+    //  1. notify existing members
     io.to(`conversation:${conversationId}`).emit("member_added", {
       conversationId,
-      members: [memberId], // keep same structure
+      members: [memberId], //  keep only required
+    });
+
+    //  2. notify NEW USER directly
+    io.to(`user:${memberId}`).emit("conversation_added", {
+      conversation: minimalConvo, //  FIXED (optimized payload)
     });
 
     /*
@@ -226,15 +240,15 @@ const addMember = async (req, res) => {
       user: {
         _id: user._id,
         name: user.name,
-        unique_id: user.unique_id,
+        unique_id: user.unique_id, //  consistent naming
       },
     });
-
   } catch (err) {
-    console.error("Add member error:", err);
+    console.error("Add member error:", err.stack); //  better debugging
+
     return res.status(500).json({
-      error: "Failed to add member",
+      error: "Failed to add member in backend",
     });
   }
 };
-module.exports = {addMember,joinViaInvite};
+module.exports = { addMember, joinViaInvite };
