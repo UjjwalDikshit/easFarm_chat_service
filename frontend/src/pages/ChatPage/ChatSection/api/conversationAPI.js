@@ -1,7 +1,7 @@
 import { axiosClient } from "../../../../utils/axiosClient";
 
-export const leaveConversationAPI = (conversationId) => {
-  return axiosClient.post(`/conversation/leave/${conversationId}`);
+export const LeaveAndDeleteConversationAPI = (conversationId) => {
+  return axiosClient.delete(`/user/conversation/leaveanddelete?conversationId=${conversationId}`);
 };
 
 export const blockConversationAPI = (conversationId) => {
@@ -11,10 +11,12 @@ export const blockConversationAPI = (conversationId) => {
 export const unblockConversationAPI = (conversationId) => {
   return axiosClient.post("/conversation/unblock", { conversationId });
 };
-export const removeMemberAPI = (conversationId, memberId) => {
-  return axiosClient.post("/conversation/remove-member", {
-    conversationId,
-    memberId,
+export const removeMemberAPI = (conversationId, uniqueId) => {
+  return axiosClient.delete("/user/conversation/removeMember", {
+    data: {
+      conversationId,
+      uniqueId,
+    },
   });
 };
 export const addMemberAPI = (conversationId, uniqueId) => {

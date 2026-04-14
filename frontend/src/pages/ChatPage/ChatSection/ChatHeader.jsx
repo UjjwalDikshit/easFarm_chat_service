@@ -2,30 +2,49 @@ import React, { useState } from "react";
 import { MoreVertical } from "lucide-react";
 import { useSelector } from "react-redux";
 import ChatOptionsMenu from "./ChatOptionsMenu";
+import { Users } from "lucide-react";
 
-import { leaveConversationAPI } from "./api/conversationAPI";
+import { LeaveAndDeleteConversationAPI } from "./api/conversationAPI";
 import {
   removeConversation,
   addConversation,
   updateConversation,
 } from "../../../store/conversationSlice";
 import AddMemberModal from "./AddMemberModal";
+import RemoveMemberModal from "./RemoveMemberModal";
+import MembersModal from "./MembersModal";
 
-export default function ChatHeader({ conversationId }) {
+import { getSocket } from "../../../socket/socket";
+import { useDispatch } from "react-redux";
+
+export default function ChatHeader({
+  conversationId,
+  setSelectedConversation,
+}) {
+  const dispatch = useDispatch();
+
   const [showMenu, setShowMenu] = useState(false);
-  const [showAddMemberModal, setShowAddMemberModal] = useState(false);
-  const presence = useSelector((state) => state.presence.users);
+  const [activeModal, setActiveModal] = useState(null);
+  const [showMembersModal, setShowMembersModal] = useState(false);
+  // values: "add" | "remove" | null
 
+  const presence = useSelector((state) => state.presence.users);
   const conversation = useSelector(
     (state) => state.conversations.byId[conversationId],
   );
-
   const typingUsers =
     useSelector((state) => state.chat.typing[conversationId]) || {};
 
   const users = Object.keys(typingUsers);
 
   if (!conversation) return null;
+
+  const groupLabel =
+    conversation.type === "private-group"
+      ? "Private Group"
+      : conversation.type === "free-group"
+        ? "Business Group"
+        : null;
 
   const title =
     conversation.type === "private"
@@ -44,51 +63,56 @@ export default function ChatHeader({ conversationId }) {
 
   const handleAddMember = () => {
     setShowMenu(false);
-    setShowAddMemberModal(true);
+    setActiveModal("add");
   };
-
-  const handleLeave = async () => {
-    if (!conversation) return;
-
-    const backup = conversation; // keep backup for rollback
+  const handleLeaveAndDelete = async () => {
+    if (!conversation?._id) return;
+    const backup = conversation;
 
     /*
   ==========================
-   1. OPTIMISTIC REMOVE
+  1. OPTIMISTIC REMOVE
   ==========================
   */
-    if (conversation._id === selectedConversation) {
-      setSelectedConversation(null); // move to safe place
+    if (conversation._id === conversationId) {
+      setSelectedConversation(null);
     }
-    dispatch(removeConversation(conversation._id));
 
+    dispatch(removeConversation(conversationId));
     setShowMenu(false);
 
     try {
       /*
     ==========================
-    2 API CALL
+    2. API CALL
     ==========================
     */
-      await leaveConversationAPI(conversation._id);
+      await LeaveAndDeleteConversationAPI(conversationId);
 
       /*
     ==========================
-    3 SUCCESS → do nothing
+    3. SOCKET CLEANUP 
     ==========================
     */
+      const socket = getSocket(); // make sure you import this
+      socket.emit("leave_conversation", conversationId);
     } catch (err) {
-      console.error("Leave failed:", err);
+      console.error("Leave/Delete failed:", err);
 
       /*
     ==========================
-    4 ROLLBACK
+    4. ROLLBACK
     ==========================
     */
       dispatch(addConversation(backup));
 
-      alert("Failed to leave conversation");
+      alert(err?.response?.data?.error || "Failed to leave conversation");
     }
+  };
+
+  const handleRemoveMember = async () => {
+    setShowMenu(false);
+    setActiveModal("remove");
   };
 
   const handleBlock = async () => {
@@ -98,7 +122,7 @@ export default function ChatHeader({ conversationId }) {
 
     /*
   ==========================
-  1️⃣ OPTIMISTIC UPDATE
+  1️OPTIMISTIC UPDATE
   ==========================
   */
     dispatch(
@@ -117,7 +141,7 @@ export default function ChatHeader({ conversationId }) {
 
       /*
     ==========================
-    ❌ ROLLBACK
+     ROLLBACK
     ==========================
     */
       dispatch(
@@ -156,26 +180,6 @@ export default function ChatHeader({ conversationId }) {
     }
   };
 
-  const handleRemoveMember = async (userId) => {
-    if (!conversation) return;
-
-    setShowMenu(false);
-
-    try {
-      await removeMemberAPI(conversation._id, userId);
-
-      /*
-    ==========================
-     REFRESH (ONLY IF NEEDED)
-    ==========================
-    */
-      dispatch(fetchConversations());
-    } catch (err) {
-      console.error("Remove member failed:", err);
-      alert("Failed to remove member");
-    }
-  };
-
   return (
     <div className="relative h-16 bg-white border-b flex items-center justify-between px-6">
       <div className="flex items-center gap-3">
@@ -184,7 +188,15 @@ export default function ChatHeader({ conversationId }) {
         </div>
 
         <div>
-          <div className="font-semibold">{title?.toUpperCase()}</div>
+          <div className="flex items-center gap-2">
+            <span className="font-semibold">{title?.toUpperCase()}</span>
+
+            {groupLabel && (
+              <span className="text-xs px-2 py-0.5 rounded bg-gray-200 text-gray-600">
+                {groupLabel}
+              </span>
+            )}
+          </div>
 
           <div className="text-sm">
             {users.length > 0 ? (
@@ -203,7 +215,15 @@ export default function ChatHeader({ conversationId }) {
       </div>
 
       {/* MENU BUTTON */}
-      <div className="relative">
+      <div className="flex items-center gap-2 relative">
+        {/* MEMBERS BUTTON (ONLY PRIVATE GROUP) */}
+        {conversation.type === "private-group" && (
+          <Users
+            onClick={() => setShowMembersModal(true)}
+            className="cursor-pointer text-gray-600 hover:text-black mr-2"
+          />
+        )}
+
         <MoreVertical
           onClick={() => setShowMenu((prev) => !prev)}
           className="cursor-pointer text-gray-600 hover:text-black"
@@ -215,17 +235,32 @@ export default function ChatHeader({ conversationId }) {
             conversation={conversation}
             onClose={() => setShowMenu(false)}
             onAddMember={handleAddMember}
-            onLeave={handleLeave}
+            onLeave={handleLeaveAndDelete}
             onBlock={handleBlock}
             onUnblock={handleUnblock}
             onRemoveMember={handleRemoveMember}
+            onDeleteGroup={handleLeaveAndDelete}
           />
         )}
-        {/* show card to add member */}
-        {showAddMemberModal && (
+
+        {activeModal === "add" && (
           <AddMemberModal
             conversationId={conversationId}
-            onClose={() => setShowAddMemberModal(false)}
+            onClose={() => setActiveModal(null)}
+          />
+        )}
+
+        {activeModal === "remove" && (
+          <RemoveMemberModal
+            conversationId={conversationId}
+            onClose={() => setActiveModal(null)}
+          />
+        )}
+
+        {showMembersModal && (
+          <MembersModal
+            conversationId={conversationId}
+            onClose={() => setShowMembersModal(false)}
           />
         )}
       </div>

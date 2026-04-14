@@ -53,19 +53,41 @@ const conversationSlice = createSlice({
     removeConversation: (state, action) => {
       const conversationId = action.payload;
 
+      if (!state.byId[conversationId]) return; 
+
       delete state.byId[conversationId];
       state.allIds = state.allIds.filter((id) => id !== conversationId);
     },
     addConversation: (state, action) => {
-      const conv = action.payload;
+      //  SUPPORT BOTH:
+      // 1. dispatch(addConversation(conversation))
+      // 2. dispatch(addConversation({ conversation }))
 
-      if (state.byId[conv._id]) return;
+      const conversation = action.payload?.conversation || action.payload; // ✅ FIX
 
-      state.byId[conv._id] = conv;
-      state.allIds.unshift(conv._id);
+      if (!conversation?._id) return;
+
+      // already exists → move to top instead
+      if (state.byId[conversation._id]) {
+        state.allIds = state.allIds.filter((id) => id !== conversation._id);
+        state.allIds.unshift(conversation._id);
+
+        //  OPTIONAL: also update latest data
+        state.byId[conversation._id] = {
+          ...state.byId[conversation._id],
+          ...conversation,
+        };
+
+        return;
+      }
+
+      state.byId[conversation._id] = conversation;
+      state.allIds.unshift(conversation._id);
     },
     replaceConversation: (state, action) => {
       const { tempId, conversation } = action.payload;
+
+      if (!conversation?._id) return; //  SAFETY
 
       delete state.byId[tempId];
 

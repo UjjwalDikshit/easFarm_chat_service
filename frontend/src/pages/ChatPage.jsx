@@ -23,7 +23,7 @@ export default function ChatPage() {
 
   useEffect(() => {
     const socket = connectSocket();
-    registerSocketEvents(dispatch);
+    registerSocketEvents(dispatch, myId);
 
     return () => {
       socket.off("new_message");
@@ -33,6 +33,8 @@ export default function ChatPage() {
       socket.off("stop_typing");
       socket.off("read_conversation");
       socket.off("member_added");
+      socket.off("conversation_added");
+      socket.off("conversation_removed");
       socket.off("member_removed");
       socket.off("member_left");
       socket.off("conversation_blocked");
@@ -78,7 +80,14 @@ export default function ChatPage() {
       });
     };
   }, [selectedConversation]);
-
+  
+  // if conversation removed and but still selectedConversation hold id, then ui break so fix and set selectedConversation = null;
+  useEffect(() => {
+    //  if conversation is deleted / removed
+    if (selectedConversation && !conversation) {
+      setSelectedConversation(null);
+    }
+  }, [selectedConversation, conversation, setSelectedConversation]);
   const auth = useSelector((state) => state.auth);
 
   if (auth.loading) {
@@ -101,7 +110,10 @@ export default function ChatPage() {
         {selectedConversation ? (
           <>
             {/* HEADER */}
-            <ChatHeader conversationId={selectedConversation} />
+            <ChatHeader
+              conversationId={selectedConversation}
+              setSelectedConversation={setSelectedConversation}
+            />
             {/* MESSAGE LIST */}
             <MessageList selectedConversation={selectedConversation} />
 

@@ -3,12 +3,26 @@
 import { getSocket } from "./socket";
 import { addMessage, clearTyping, setTyping } from "../store/chatSlice";
 import { setPresence, setBulkPresence } from "../store/presenceSlice";
-import { updateLastMessage } from "../store/conversationSlice";
-import { updateLastRead } from "../store/chatSlice";
+import {
+  updateLastMessage,
+  removeConversation,
+  addConversation,
+} from "../store/conversationSlice";
+import {
+  updateLastRead,
+  removeMemberRealtime,
+  addMembersRealtime,
+} from "../store/chatSlice";
 import { useSelector } from "react-redux";
+import { fetchConversations } from "../store/conversationSlice";
 
-export const registerSocketEvents = (dispatch) => {
+export const registerSocketEvents = (dispatch, myId) => {
   const socket = getSocket();
+  // const myId = useSelector((state) => {
+  //   const user = state.auth.user;
+  //   return user?._id || user?.user?._id || null;
+  // });
+  console.log(myId);
 
   // When connected
   socket.on("connect", () => {
@@ -54,20 +68,33 @@ export const registerSocketEvents = (dispatch) => {
     dispatch(updateLastRead(data));
   });
 
+  socket.on("conversation_added", (data) => {
+    console.log("I was added to new conversation");
+    if (!data?.conversation?._id) return; //  safety check
+    dispatch(addConversation(data.conversation));
+  });
+
+  socket.on("conversation_removed", ({ conversationId }) => {
+    dispatch(removeConversation(conversationId));
+  });
+
   socket.on("member_added", ({ conversationId, members }) => {
     dispatch(addMembersRealtime({ conversationId, members }));
+    //  assumes addMembersRealtime is imported (see note below)
   });
 
   socket.on("member_removed", ({ conversationId, userId }) => {
     dispatch(removeMemberRealtime({ conversationId, userId }));
-
-    if (userId === currentUserId()) {
+    //  currentUserId() not defined → use myId
+    if (userId === myId) {
       dispatch(removeConversation(conversationId));
     }
   });
+
   socket.on("member_left", ({ conversationId, userId }) => {
     dispatch(removeMemberRealtime({ conversationId, userId }));
-    if (userId === currentUserId()) {
+
+    if (userId === myId) {
       dispatch(removeConversation(conversationId));
     }
   });

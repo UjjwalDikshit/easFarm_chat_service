@@ -11,3 +11,9 @@ export const fetchChatsAPI = async (conversationId, cursor = null) => {
 
   return response.data;
 };
+
+export const getMembersAPI = (conversationId) => {
+  return axiosClient.get(
+    `/mything/conversation/${conversationId}/members`
+  );
+};

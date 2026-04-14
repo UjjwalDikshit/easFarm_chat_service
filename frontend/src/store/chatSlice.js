@@ -109,33 +109,33 @@ const chatSlice = createSlice({
         lastReadMessageId: String(lastReadMessageId),
       };
     },
+
+    addMembersRealtime: (state, action) => {
+      const { conversationId, members } = action.payload;
+
+      if (!state.conversations[conversationId]) {
+        state.conversations[conversationId] = { members: {} };
+      }
+
+      if (!state.conversations[conversationId].members) {
+        state.conversations[conversationId].members = {};
+      }
+
+      members.forEach((userId) => {
+        state.conversations[conversationId].members[userId] = {
+          lastReadMessageId: null,
+        };
+      });
+    },
+    removeMemberRealtime: (state, action) => {
+      const { conversationId, userId } = action.payload;
+
+      const convo = state.conversations[conversationId];
+      if (!convo || !convo.members) return;
+
+      delete convo.members[userId];
+    },
   },
-  addMembersRealtime: (state, action) => {
-    const { conversationId, members } = action.payload;
-
-    if (!state.conversations[conversationId]) {
-      state.conversations[conversationId] = { members: {} };
-    }
-
-    if (!state.conversations[conversationId].members) {
-      state.conversations[conversationId].members = {};
-    }
-
-    members.forEach((userId) => {
-      state.conversations[conversationId].members[userId] = {
-        lastReadMessageId: null,
-      };
-    });
-  },
-  removeMemberRealtime: (state, action) => {
-    const { conversationId, userId } = action.payload;
-
-    const convo = state.conversations[conversationId];
-    if (!convo || !convo.members) return;
-
-    delete convo.members[userId];
-  },
-
   extraReducers: (builder) => {
     builder
       .addCase(fetchChats.pending, (state) => {
@@ -148,7 +148,7 @@ const chatSlice = createSlice({
         const { conversationId, messages, members } = action.payload;
         /*
         ==========================================
-        1. STORE MEMBERS (🔥 THIS WAS MISSING)
+        1. STORE MEMBERS ( THIS WAS MISSING)
         ==========================================
         */
 
@@ -215,7 +215,6 @@ export const {
   updateLastRead,
   removeMemberRealtime,
   addMembersRealtime,
-  
 } = chatSlice.actions;
 
 export default chatSlice.reducer;
