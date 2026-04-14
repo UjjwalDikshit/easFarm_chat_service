@@ -112,7 +112,7 @@ const createConversation = async (req, res) => {
                   createdBy: creatorId,
                   privateKey,
                   lastMessageAt: new Date(),
-                  lastMessageId: null, // ✅ ADD THIS
+                  lastMessageId: null,
                 },
               ],
               { session },
@@ -125,14 +125,14 @@ const createConversation = async (req, res) => {
                   userId: creatorId,
                   role: "admin",
                   joinedAt: new Date(),
-                  unreadCount: 0, // ✅ ADD
+                  unreadCount: 0, 
                 },
                 {
                   conversationId: conv._id,
                   userId: otherUser,
                   role: "member",
                   joinedAt: new Date(),
-                  unreadCount: 0, // ✅ ADD
+                  unreadCount: 0,
                 },
               ],
               { session },
