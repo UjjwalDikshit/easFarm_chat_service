@@ -1,5 +1,6 @@
 const { getIO } = require("../config/socket");
 const { conversation, conversationMember } = require("../models/conversation");
+const User  = require('../models/user')
 
 const leaveGroup = async (req, res) => {
   try {
@@ -109,29 +110,62 @@ const leaveGroup = async (req, res) => {
 };
 
 
-
 const removeMember = async (req, res) => {
   try {
-    const adminId = req.user._id.toString();
-    const { conversationId, memberId } = req.body;
+    const io = getIO(); //  FIX
 
-    if (!conversationId || !memberId) {
+    const adminId = req.user._id.toString();
+    const { conversationId, uniqueId } = req.body;
+    console.log(conversationId, uniqueId);
+    /*
+    ==========================
+    1. VALIDATION
+    ==========================
+    */
+    if (!conversationId || !uniqueId) {
       return res.status(400).json({ error: "Missing data" });
     }
 
+    /*
+    ==========================
+    2. FIND USER
+    ==========================
+    */
+    const user = await User.findOne({ uniqueId });
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const memberId = user._id.toString();
+
+    /*
+    ==========================
+    3. PREVENT SELF REMOVE
+    ==========================
+    */
     if (adminId === memberId) {
       return res.status(400).json({
         error: "Use leave group instead",
       });
     }
 
+    /*
+    ==========================
+    4. CHECK GROUP
+    ==========================
+    */
     const convo = await conversation.findById(conversationId);
 
     if (!convo || convo.type !== "private-group") {
       return res.status(400).json({ error: "Invalid group" });
     }
 
-    // Check admin
+    /*
+    ==========================
+    5. CHECK ADMIN
+    ==========================
+    */
     const isAdmin = await conversationMember.findOne({
       conversationId,
       userId: adminId,
@@ -144,6 +178,11 @@ const removeMember = async (req, res) => {
       });
     }
 
+    /*
+    ==========================
+    6. CHECK TARGET MEMBER
+    ==========================
+    */
     const targetMember = await conversationMember.findOne({
       conversationId,
       userId: memberId,
@@ -155,23 +194,49 @@ const removeMember = async (req, res) => {
       });
     }
 
-    // 🔥 Prevent removing another admin (optional rule)
+    /*
+    ==========================
+    7. PREVENT ADMIN REMOVE
+    ==========================
+    */
     if (targetMember.role === "admin") {
       return res.status(400).json({
         error: "Cannot remove another admin",
       });
     }
 
-    io.to(`conversation:${conversationId}`).emit("member_removed", {
-      conversationId,
-      userId: memberId,
-    });
-
+    /*
+    ==========================
+    8. DELETE MEMBER
+    ==========================
+    */
     await conversationMember.deleteOne({
       conversationId,
       userId: memberId,
     });
 
+    /*
+    ==========================
+    9. SOCKET EVENTS
+    ==========================
+    */
+
+    // notify group
+    io.to(`conversation:${conversationId}`).emit("member_removed", {
+      conversationId,
+      userId: memberId,
+    });
+
+    // notify removed user (VERY IMPORTANT)
+    io.to(`user:${memberId}`).emit("conversation_removed", {
+      conversationId,
+    });
+
+    /*
+    ==========================
+    10. RESPONSE
+    ==========================
+    */
     return res.json({
       success: true,
       message: "Member removed successfully",
@@ -184,26 +249,28 @@ const removeMember = async (req, res) => {
   }
 };
 
-// const promoteToAdmin = async (req, res) => {
-//   const adminId = req.user._id.toString();
-//   const { conversationId, memberId } = req.body;
 
-//   const isAdmin = await conversationMember.findOne({
-//     conversationId,
-//     userId: adminId,
-//     role: "admin",
-//   });
+ const promoteToAdmin = async (req, res) => {
+  const adminId = req.user._id.toString();
+  const { conversationId, memberId } = req.body;
 
-//   if (!isAdmin) {
-//     return res.status(403).json({ error: "Only admin allowed" });
-//   }
+  const isAdmin = await conversationMember.findOne({
+    conversationId,
+    userId: adminId,
+    role: "admin",
+  });
 
-//   await conversationMember.updateOne(
-//     { conversationId, userId: memberId },
-//     { $set: { role: "admin" } },
-//   );
+  if (!isAdmin) {
+    return res.status(403).json({ error: "Only admin allowed" });
+  }
 
-//   res.json({ success: true });
-// };
+  await conversationMember.updateOne(
+    { conversationId, userId: memberId },
+    { $set: { role: "admin" } },
+  );
+
+  res.json({ success: true });
+};
+
 
 module.exports = { leaveGroup, removeMember };
