@@ -240,8 +240,8 @@ const createConversation = async (req, res) => {
               description,
               createdBy: creatorId,
               lastMessageAt: new Date(),
-              lastMessageId: null, // ✅ ADD THIS
-            },
+              lastMessageId: null, 
+            }
           ],
           { session },
         );
@@ -251,7 +251,7 @@ const createConversation = async (req, res) => {
           userId,
           role: userId === creatorId ? "admin" : "member",
           joinedAt: new Date(),
-          unreadCount: 0, // ✅ ADD
+          unreadCount: 0, 
         }));
 
         await conversationMember.insertMany(memberDocs, { session });
@@ -290,7 +290,7 @@ const createConversation = async (req, res) => {
               description,
               createdBy: creatorId,
               lastMessageAt: new Date(),
-              lastMessageId: null, // ✅ ADD THIS
+              lastMessageId: null, 
             },
           ],
           { session },

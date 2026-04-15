@@ -17,3 +17,15 @@ export const getMembersAPI = (conversationId) => {
     `/mything/conversation/${conversationId}/members`
   );
 };
+
+export const getInviteLinkAPI = async (conversationId) => {
+  try {
+    const res = await axiosClient.get(
+      `/user/conversations/${conversationId}/invite-link`
+    );
+
+    return res.data;
+  } catch (error) {
+    throw error;
+  }
+};

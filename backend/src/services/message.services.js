@@ -10,7 +10,7 @@ const createMessage = async ({ type, content, conversationId, senderId }) => {
     throw new Error("Either groupId or conversationId required");
   }
 
-  // 1️⃣ Create message
+  // 1️ Create message
   const message = await Message.create({
     type,
     content,
@@ -18,7 +18,7 @@ const createMessage = async ({ type, content, conversationId, senderId }) => {
     conversationId,
   });
 
-  // 2️⃣ Update lastMessage (for chaining optimization)
+  // 2️ Update lastMessage (for chaining optimization)
   if (conversationId) {
     await Conversation.conversation.findByIdAndUpdate(conversationId, {
       lastMessage: message._id,

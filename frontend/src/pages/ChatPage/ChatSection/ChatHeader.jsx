@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { MoreVertical } from "lucide-react";
 import { useSelector } from "react-redux";
 import ChatOptionsMenu from "./ChatOptionsMenu";
-import { Users } from "lucide-react";
+import { Users, Share2 } from "lucide-react";
 
 import { LeaveAndDeleteConversationAPI } from "./api/conversationAPI";
 import {
@@ -13,6 +13,7 @@ import {
 import AddMemberModal from "./AddMemberModal";
 import RemoveMemberModal from "./RemoveMemberModal";
 import MembersModal from "./MembersModal";
+import InviteLinkButton from "./InviteLinkButton";
 
 import { getSocket } from "../../../socket/socket";
 import { useDispatch } from "react-redux";
@@ -216,6 +217,11 @@ export default function ChatHeader({
 
       {/* MENU BUTTON */}
       <div className="flex items-center gap-2 relative">
+        {conversation.type === "free-group" && (
+          <InviteLinkButton conversationId={conversationId}>
+            <Share2 className="w-5 h-5 text-gray-600 hover:text-black cursor-pointer" />
+          </InviteLinkButton>
+        )}
         {/* MEMBERS BUTTON (ONLY PRIVATE GROUP) */}
         {conversation.type === "private-group" && (
           <Users
