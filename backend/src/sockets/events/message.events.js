@@ -18,7 +18,7 @@ module.exports = function (io, socket) {
 
       /*
     ==================================
-    0️⃣ FETCH CONVERSATION + VALIDATION
+    0️ FETCH CONVERSATION + VALIDATION
     ==================================
     */
 
@@ -32,7 +32,7 @@ module.exports = function (io, socket) {
       }
 
       /*
-    🔥 BLOCK CHECK (THIS IS WHERE IT GOES)
+     BLOCK CHECK (THIS IS WHERE IT GOES)
     */
       if (convo.type === "private" && convo.isBlocked) {
         return cb?.({
@@ -57,7 +57,7 @@ module.exports = function (io, socket) {
       }
       /*
       ==================================
-      1️⃣ CREATE MESSAGE
+      1️ CREATE MESSAGE
       ==================================
       */
       const message = await createMessage({
@@ -76,7 +76,7 @@ module.exports = function (io, socket) {
       );
       /*
       ==================================
-      2️⃣ UPDATE UNREAD COUNT
+      2️ UPDATE UNREAD COUNT
       ==================================
       */
 
@@ -92,7 +92,7 @@ module.exports = function (io, socket) {
 
       /*
       ==================================
-      3️⃣ EMIT MESSAGE
+      3️ EMIT MESSAGE
       ==================================
       */
 
@@ -100,7 +100,7 @@ module.exports = function (io, socket) {
 
       /*
       ==================================
-      4️⃣ EMIT NOTIFICATION
+      4️ EMIT NOTIFICATION
       ==================================
       */
 
@@ -114,7 +114,7 @@ module.exports = function (io, socket) {
 
       /*
       ==================================
-      5️⃣ CALLBACK
+      5️ CALLBACK
       ==================================
       */
 

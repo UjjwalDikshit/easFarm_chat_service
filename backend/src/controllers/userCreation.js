@@ -4,44 +4,60 @@ const jwt = require("jsonwebtoken");
 const userCreation = async (req, res) => {
   try {
     const { uniqueId, name, avatar } = req.body;
-    const {token} = req.cookies;
+    const { token } = req.cookies;
+
     let payload;
 
+    //  Verify JWT
     try {
-       payload = jwt.verify(token, process.env.JWT_SECRET);
+      payload = jwt.verify(token, process.env.JWT_SECRET);
     } catch (error) {
       return res.status(401).json({
-        err:error,
         success: false,
-        error: "Wrong credentials or invalid token",
+        message: "Invalid token",
       });
     }
+
+    const userId = payload._id;
+
     /*
     =============================
-    BASIC VALIDATION
+    VALIDATION
     =============================
     */
-
     if (!uniqueId) {
       return res.status(400).json({
         success: false,
-        error: "uniqueId is required",
+        message: "uniqueId is required",
       });
     }
 
     /*
     =============================
-    CHECK IF USER EXISTS
+    1️ CHECK: USER ALREADY HAS ACCOUNT
     =============================
     */
+    const existingByUser = await ChatUser.findOne({ user_id: userId });
 
-    let existingUser = await ChatUser.findOne({ uniqueId });
-
-    if (existingUser) {
+    if (existingByUser) {
       return res.status(200).json({
-        success: false,
+        success: true, //  important (treat as usable)
         message: "User already exists",
-        // data: existingUser
+        chatUserId: existingByUser._id,
+      });
+    }
+
+    /*
+    =============================
+    2️ CHECK: UNIQUE ID TAKEN
+    =============================
+    */
+    const existingUnique = await ChatUser.findOne({ uniqueId });
+
+    if (existingUnique) {
+      return res.status(400).json({
+        success: false,
+        message: "Unique ID already taken",
       });
     }
 
@@ -50,10 +66,9 @@ const userCreation = async (req, res) => {
     CREATE NEW USER
     =============================
     */
-
     const newUser = await ChatUser.create({
       uniqueId,
-      user_id:payload._id,
+      user_id: userId,
       name,
       avatar,
       lastSeen: new Date(),
@@ -62,14 +77,15 @@ const userCreation = async (req, res) => {
     return res.status(201).json({
       success: true,
       message: "User created successfully",
-      data: newUser,
+      chatUserId: newUser._id,
     });
+
   } catch (error) {
     console.error("User creation error:", error);
 
     return res.status(500).json({
       success: false,
-      error: "Failed to create user",
+      message: "Failed to create user",
     });
   }
 };
