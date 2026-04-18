@@ -22,7 +22,7 @@ export default function MessageBubble({ msg }) {
 
   /*
   ==========================================
-  ✅ GET OTHER USER ID (FIXED)
+   GET OTHER USER ID (FIXED)
   ==========================================
   */
   const membersIds = Object.keys(conversation?.members || {});
@@ -30,25 +30,25 @@ export default function MessageBubble({ msg }) {
 
   /*
   ==========================================
-  ✅ LAST READ ID
+   LAST READ ID
   ==========================================
   */
   const lastReadId = conversation?.members?.[otherUserId]?.lastReadMessageId;
 
   /*
   ==========================================
-  ✅ CHECK IF MESSAGE IS MINE
+   CHECK IF MESSAGE IS MINE
   ==========================================
   */
   const isMe = String(msg.senderId) === String(myId);
 
   /*
   ==========================================
-  ✅ BLUE TICK LOGIC (FIXED)
+   BLUE TICK LOGIC (FIXED)
   ==========================================
   */
   const isSeen = isMe && lastReadId && String(msg._id) <= String(lastReadId);
-
+  const hasUniqueId = !!msg.uniqueId;
   /*
   ==========================================
   RETRY MESSAGE
@@ -143,51 +143,59 @@ export default function MessageBubble({ msg }) {
         return <span>{msg.content}</span>;
     }
   };
-
   return (
-    <div className={`flex ${isMe ? "justify-end" : "justify-start"}`}>
+    <div className={`flex ${isMe ? "justify-end" : "justify-start"} mb-2`}>
       <div
-        className={`px-4 py-2 rounded-2xl max-w-xs break-words shadow-sm ${
+        className={`
+        px-4 py-2.5 rounded-2xl max-w-xs break-words shadow-md transition-all
+        ${
           isMe
-            ? "bg-blue-500 text-white rounded-br-none"
-            : "bg-white text-gray-800 rounded-bl-none"
-        }`}
+            ? "bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-br-none"
+            : "bg-white border border-gray-100 text-gray-800 rounded-bl-none shadow-sm"
+        }
+      `}
       >
         {/* Message Content */}
-        <div>{renderContent()}</div>
+        <div className="text-sm leading-relaxed">{renderContent()}</div>
 
-        {/* Time + Status */}
+        {/* Metadata Footer */}
         <div
-          className={`text-[10px] mt-1 flex items-center gap-2 ${
-            isMe ? "text-blue-100 justify-end" : "text-gray-400"
+          className={`flex items-center gap-2 mt-1.5 text-[10px] ${
+            isMe ? "justify-end" : "justify-start"
           }`}
         >
-          {/* <span>{time}</span> */}
-          <span>{formatMessageTime(msg.createdAt)}</span>
+          {/* Timestamp */}
+          <span className={isMe ? "text-blue-100" : "text-gray-400"}>
+            {formatMessageTime(msg.createdAt)}
+          </span>
 
-          {isMe && msg.status !== "failed" && (
-            <span className="flex items-center ml-1 transition-all duration-300 ease-in-out">
-              {isSeen ? (
-                <CheckCheck
-                  size={14}
-                  className="text-blue-950 transition-all duration-300 ease-in-out opacity-100 scale-100"
-                />
-              ) : (
-                <Check
-                  size={14}
-                  className="text-gray-400 transition-all duration-300 ease-in-out opacity-80 scale-95"
-                />
-              )}
+          {/* Unique ID (if exists) */}
+          {msg.uniqueId && (
+            <span
+              className={`text-[9px] font-mono ${
+                isMe ? "text-blue-200/80" : "text-gray-400"
+              }`}
+            >
+              #{msg.uniqueId}
             </span>
           )}
 
-          {msg.status === "failed" && (
-            <button
-              onClick={retryMessage}
-              className="text-red-500 text-[10px] underline"
-            >
-              Retry
-            </button>
+          {/* Status Indicators */}
+          {isMe && (
+            <span className="flex items-center ml-0.5">
+              {msg.status === "sent" && !isSeen && (
+                <Check size={12} className="text-blue-200" />
+              )}
+              {isSeen && <CheckCheck size={12} className="text-blue-950" />}
+              {msg.status === "failed" && (
+                <button
+                  onClick={retryMessage}
+                  className="text-red-400 hover:text-red-300 underline transition-colors"
+                >
+                  Retry
+                </button>
+              )}
+            </span>
           )}
         </div>
       </div>

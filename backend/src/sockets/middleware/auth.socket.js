@@ -6,7 +6,7 @@ module.exports = async (socket, next) => {
 
     /*
     ==========================
-    1️⃣ EXTRACT TOKEN
+    1️ EXTRACT TOKEN
     ==========================
     */
 
@@ -24,7 +24,7 @@ module.exports = async (socket, next) => {
 
     /*
     ==========================
-    2️⃣ VERIFY JWT
+    2️ VERIFY JWT
     ==========================
     */
 
@@ -42,12 +42,12 @@ module.exports = async (socket, next) => {
 
     /*
     ==========================
-    3️⃣ FIND CHAT USER
+    3️ FIND CHAT USER
     ==========================
     */
 
     const user = await User.findOne({ user_id: decoded._id })
-      .select("_id name email status isBlocked")
+      .select("_id name uniqueId")
       .lean();
 
     if (!user) {
@@ -56,7 +56,7 @@ module.exports = async (socket, next) => {
 
     /*
     ==========================
-    4️⃣ BLOCK CHECK
+    4️ BLOCK CHECK
     ==========================
     */
 
@@ -66,7 +66,7 @@ module.exports = async (socket, next) => {
 
     /*
     ==========================
-    5️⃣ ATTACH USER TO SOCKET
+    5️ ATTACH USER TO SOCKET
     ==========================
     */
 

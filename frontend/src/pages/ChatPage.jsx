@@ -1,22 +1,23 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { connectSocket, getSocket } from "../socket/socket";
 import { registerSocketEvents } from "../socket/registerEvents";
 import { useDispatch, useSelector } from "react-redux";
-import { addMessage } from "../store/chatSlice";
+import { markConversationReadOptimistic } from "../store/conversationSlice";
 import ChatHeader from "./ChatPage/ChatSection/ChatHeader";
 import Sidebar from "./ChatPage/Sidebar/ConversationList/Sidebar";
 import MessageInput from "./ChatPage/ChatSection/MessageInput";
 import MessageList from "./ChatPage/ChatSection/MessageList/MessageList";
-import { markConversationReadOptimistic } from "../store/conversationSlice";
+import ChatSkeleton from "../services/ChatSkeleton";
 
 export default function ChatPage() {
   const dispatch = useDispatch();
 
   const [selectedConversation, setSelectedConversation] = useState(null);
+
   const myId = useSelector((state) => state.auth.user?._id);
 
   const conversation = useSelector(
-    (state) => state.conversations.byId[selectedConversation],
+    (state) => state.conversations.byId[selectedConversation]
   );
 
   /* ================= SOCKET SETUP ================= */
@@ -40,63 +41,66 @@ export default function ChatPage() {
       socket.off("conversation_blocked");
       socket.off("conversation_unblocked");
     };
-  }, [dispatch]);
+  }, [dispatch, myId]); // fix
 
   /* ================= JOIN / LEAVE ROOM ================= */
 
   useEffect(() => {
     const socket = getSocket();
-    if (!socket || !selectedConversation) return;
+
+    if (!socket || !selectedConversation || !conversation) return; // fix
 
     const userIds =
-      conversation.type === "private" ? [conversation.otherMember._id] : [];
+      conversation?.type === "private" && conversation?.otherMember?._id
+        ? [conversation.otherMember._id]
+        : []; // fix
 
-    // join conversation for messages
     socket.emit("join_conversation", {
       conversationId: selectedConversation,
     });
 
-    // subscribe to presence
     userIds.forEach((userId) => {
       socket.emit("presence:subscribe", { userId });
     });
 
-    // check current presence
-    // socket.emit("presence:check", { userIds });
-
     dispatch(
-      markConversationReadOptimistic({ conversationId: selectedConversation }),
+      markConversationReadOptimistic({
+        conversationId: selectedConversation,
+      })
     );
 
     return () => {
       socket.emit("leave_conversation", {
-        conversationId: conversation._id,
+        conversationId: selectedConversation, // fix
       });
 
       userIds.forEach((userId) => {
         socket.emit("presence:unsubscribe", {
-          user: [conversation.otherMember._id],
+          user:userId, // fix
         });
       });
     };
-  }, [selectedConversation]);
-  
-  // if conversation removed and but still selectedConversation hold id, then ui break so fix and set selectedConversation = null;
+  }, [selectedConversation, conversation, dispatch]); // fix
+
+  /* ================= AUTO RESET IF CONVERSATION DELETED ================= */
+
   useEffect(() => {
-    //  if conversation is deleted / removed
     if (selectedConversation && !conversation) {
       setSelectedConversation(null);
     }
-  }, [selectedConversation, conversation, setSelectedConversation]);
+  }, [selectedConversation, conversation]); // fix
+
   const auth = useSelector((state) => state.auth);
 
   if (auth.loading) {
     return (
-      <div className="h-screen flex items-center justify-center">
-        Loading...
-      </div>
+      // <div className="h-screen flex items-center justify-center">
+      //   Loading...
+      // </div>
+      <ChatSkeleton/>
     );
   }
+
   return (
     <div className="h-screen flex bg-gray-100">
       {/* ================= SIDEBAR ================= */}
@@ -109,15 +113,13 @@ export default function ChatPage() {
       <div className="flex-1 flex flex-col">
         {selectedConversation ? (
           <>
-            {/* HEADER */}
             <ChatHeader
               conversationId={selectedConversation}
               setSelectedConversation={setSelectedConversation}
             />
-            {/* MESSAGE LIST */}
+
             <MessageList selectedConversation={selectedConversation} />
 
-            {/* INPUT */}
             <MessageInput selectedConversation={selectedConversation} />
           </>
         ) : (

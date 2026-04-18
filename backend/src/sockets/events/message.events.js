@@ -11,6 +11,8 @@ module.exports = function (io, socket) {
     try {
       const { type, content, conversationId, clientId } = data;
       const senderId = socket.user._id; // chatUserId
+      const uniqueId = socket.user.uniqueId;
+      console.log(socket.user);
 
       if (!content) {
         return cb?.({ success: false, message: "Message content required" });
@@ -65,6 +67,7 @@ module.exports = function (io, socket) {
         content,
         conversationId,
         senderId,
+        uniqueId, 
       });
 
       await conversation.updateOne(

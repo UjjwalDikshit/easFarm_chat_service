@@ -1,7 +1,7 @@
 const Message = require("../models/message");
 const Conversation = require("../models/conversation");
 
-const createMessage = async ({ type, content, conversationId, senderId }) => {
+const createMessage = async ({ type, content, conversationId, senderId , uniqueId}) => {
   if (!content) {
     throw new Error("Message content is required");
   }
@@ -16,6 +16,7 @@ const createMessage = async ({ type, content, conversationId, senderId }) => {
     content,
     senderId,
     conversationId,
+    uniqueId,
   });
 
   // 2️ Update lastMessage (for chaining optimization)

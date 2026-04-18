@@ -16,7 +16,9 @@ const messageSchema = new mongoose.Schema(
       ref: "ChatUser",
       index: true,
     },
-
+    uniqueId:{ // so that i can print sender on message
+      type:String,
+    },
     type: {
       type: String,
       enum: ["text", "image", "video", "audio", "file", "system"],
