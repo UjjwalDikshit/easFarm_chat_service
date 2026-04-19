@@ -2,7 +2,7 @@ import React from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { getSocket } from "../../../../socket/socket";
 import { replaceTempMessage } from "../../../../store/chatSlice";
-import { Check, CheckCheck } from "lucide-react";
+import { Check, CheckCheck, AlertCircle, RefreshCw } from "lucide-react";
 
 export default function MessageBubble({ msg }) {
   const currentUser = useSelector((state) => state.auth.user);
@@ -18,7 +18,6 @@ export default function MessageBubble({ msg }) {
     (state) => state.chat.conversations[msg.conversationId],
   );
 
-  console.log("conversation members", conversation?.members);
 
   /*
   ==========================================
@@ -144,36 +143,38 @@ export default function MessageBubble({ msg }) {
     }
   };
   return (
-    <div className={`flex ${isMe ? "justify-end" : "justify-start"} mb-2`}>
+    <div className={`flex ${isMe ? "justify-end" : "justify-start"} mb-3 px-2`}>
       <div
         className={`
-        px-4 py-2.5 rounded-2xl max-w-xs break-words shadow-md transition-all
-        ${
-          isMe
-            ? "bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-br-none"
-            : "bg-white border border-gray-100 text-gray-800 rounded-bl-none shadow-sm"
-        }
-      `}
+          relative px-4 py-2.5 rounded-2xl max-w-[85%] md:max-w-md break-words shadow-sm transition-all
+          ${
+            isMe
+              ? "bg-blue-600 text-white rounded-tr-none shadow-blue-200/50"
+              : "bg-blue-50 border border-blue-100 text-blue-950 rounded-tl-none shadow-sm"
+          }
+        `}
       >
         {/* Message Content */}
-        <div className="text-sm leading-relaxed">{renderContent()}</div>
+        <div className="text-[14.5px] leading-relaxed">
+          {renderContent()}
+        </div>
 
         {/* Metadata Footer */}
         <div
-          className={`flex items-center gap-2 mt-1.5 text-[10px] ${
+          className={`flex items-center gap-2 mt-1.5 text-[10px] font-medium ${
             isMe ? "justify-end" : "justify-start"
           }`}
         >
           {/* Timestamp */}
-          <span className={isMe ? "text-blue-100" : "text-gray-400"}>
+          <span className={isMe ? "text-blue-100" : "text-blue-400"}>
             {formatMessageTime(msg.createdAt)}
           </span>
 
-          {/* Unique ID (if exists) */}
+          {/* Unique ID */}
           {msg.uniqueId && (
             <span
-              className={`text-[9px] font-mono ${
-                isMe ? "text-blue-200/80" : "text-gray-400"
+              className={`font-mono opacity-70 ${
+                isMe ? "text-blue-200" : "text-blue-300"
               }`}
             >
               #{msg.uniqueId}
@@ -183,21 +184,29 @@ export default function MessageBubble({ msg }) {
           {/* Status Indicators */}
           {isMe && (
             <span className="flex items-center ml-0.5">
-              {msg.status === "sent" && !isSeen && (
-                <Check size={12} className="text-blue-200" />
-              )}
-              {isSeen && <CheckCheck size={12} className="text-blue-950" />}
-              {msg.status === "failed" && (
+              {msg.status === "failed" ? (
                 <button
                   onClick={retryMessage}
-                  className="text-red-400 hover:text-red-300 underline transition-colors"
+                  className="flex items-center gap-1 text-white hover:underline transition-colors font-bold"
                 >
+                  <RefreshCw size={10} />
                   Retry
                 </button>
+              ) : isSeen ? (
+                <CheckCheck size={13} className="text-white" />
+              ) : (
+                <Check size={13} className="text-blue-200" />
               )}
             </span>
           )}
         </div>
+
+        {/* Tail shadow effect for professional look */}
+        <div className={`absolute top-0 w-2 h-2 ${
+          isMe 
+            ? "-right-1 bg-blue-600 [clip-path:polygon(0_0,0_100%,100%_0)]" 
+            : "-left-1 bg-blue-50 border-l border-t border-blue-100 [clip-path:polygon(0_0,100%_100%,100%_0)]"
+        }`} />
       </div>
     </div>
   );

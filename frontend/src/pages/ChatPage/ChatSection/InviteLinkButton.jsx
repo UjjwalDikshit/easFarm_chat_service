@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
-import { Link2, Copy, Check, AlertCircle } from "lucide-react";
+import { Link2, AlertCircle, Check, Copy, Loader2 } from "lucide-react";
 import { getInviteLinkAPI } from "./api/fetchChatsAPI";
 
 export default function InviteLinkButton({ conversationId }) {
@@ -77,60 +77,80 @@ export default function InviteLinkButton({ conversationId }) {
       {/* BUTTON */}
       <button
         onClick={() => setOpen((prev) => !prev)}
-        className="p-2 rounded-full hover:bg-gray-100 transition"
+        className={`p-2 rounded-full transition-all duration-200 ${
+          open ? "bg-blue-100 text-blue-700" : "hover:bg-blue-50 text-blue-600"
+        }`}
+        title="Invite Link"
       >
-        <Link2 className="w-5 h-5 text-gray-600 hover:text-black" />
+        <Link2 className="w-5 h-5" />
       </button>
 
       {/* POPOVER */}
       {open && (
-        <div className="absolute right-0 top-12 w-72 bg-white border rounded-xl shadow-lg p-4 z-50">
-          <div className="text-sm font-semibold mb-2">
+        <div className="absolute right-0 top-12 w-72 bg-white border border-blue-100 rounded-2xl shadow-xl p-5 z-50 animate-in fade-in zoom-in duration-200">
+          <div className="text-sm font-bold text-blue-950 mb-3 flex items-center gap-2">
+            <Link2 size={16} className="text-blue-600" />
             Invite to Group
           </div>
 
-          {/* LOADING */}
+          {/* LOADING STATE */}
           {loading && (
-            <div className="text-sm text-gray-400">Loading...</div>
-          )}
-
-          {/* ERROR */}
-          {error && (
-            <div className="flex items-center gap-2 text-red-500 text-sm">
-              <AlertCircle size={16} />
-              {error}
+            <div className="flex items-center gap-2 text-sm text-blue-400 py-2">
+              <Loader2 size={16} className="animate-spin" />
+              Generating link...
             </div>
           )}
 
-          {/* SUCCESS */}
+          {/* ERROR STATE */}
+          {error && (
+            <div className="flex items-center gap-2 text-error text-xs bg-error/10 p-3 rounded-lg border border-error/20">
+              <AlertCircle size={16} className="shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
+
+          {/* SUCCESS STATE */}
           {!loading && invite && (
-            <>
-              {/* CODE BOX */}
-              <div className="flex items-center justify-between bg-gray-100 px-3 py-2 rounded-lg mb-3">
-                <span className="font-mono text-sm">
+            <div className="space-y-3">
+              <p className="text-[11px] text-blue-900/50 uppercase font-bold tracking-wider">
+                Share this code
+              </p>
+              
+              <div className="flex items-center justify-between bg-blue-50 border border-blue-100 px-3 py-2.5 rounded-xl group transition-all">
+                <span className="font-mono text-sm font-bold text-blue-800">
                   {invite.inviteCode}
                 </span>
 
                 <button
                   onClick={handleCopy}
-                  className="p-1 hover:bg-gray-200 rounded"
+                  className={`p-1.5 rounded-lg transition-all ${
+                    copied 
+                      ? "bg-success/10 text-success" 
+                      : "hover:bg-blue-200/50 text-blue-500"
+                  }`}
                 >
                   {copied ? (
-                    <Check size={16} className="text-green-500" />
+                    <Check size={16} />
                   ) : (
                     <Copy size={16} />
                   )}
                 </button>
               </div>
 
-              {/* COPY STATUS */}
               {copied && (
-                <div className="text-xs text-green-500">
-                  Copied to clipboard
+                <div className="text-[11px] font-medium text-success flex items-center gap-1 animate-in slide-in-from-left-1">
+                  <Check size={12} />
+                  Link copied to clipboard
                 </div>
               )}
-            </>
+            </div>
           )}
+          
+          <div className="mt-4 pt-4 border-t border-blue-50">
+            <p className="text-[10px] text-blue-900/40 text-center italic">
+              Anyone with this code can join the group.
+            </p>
+          </div>
         </div>
       )}
     </div>

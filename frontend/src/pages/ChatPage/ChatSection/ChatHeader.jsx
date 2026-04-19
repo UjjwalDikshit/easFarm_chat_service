@@ -1,8 +1,13 @@
 import React, { useState } from "react";
-import { MoreVertical } from "lucide-react";
 import { useSelector } from "react-redux";
 import ChatOptionsMenu from "./ChatOptionsMenu";
-import { Users, Share2 } from "lucide-react";
+import {
+  MoreVertical,
+  Users,
+  Share2,
+  ChevronLeft,
+  Plus, // Using the vertical plus sign as requested
+} from "lucide-react";
 
 import { LeaveAndDeleteConversationAPI } from "./api/conversationAPI";
 import {
@@ -182,94 +187,132 @@ export default function ChatHeader({
   };
 
   return (
-    <div className="relative h-16 bg-white border-b flex items-center justify-between px-6">
+    // Update background to a light blue shade, remove backdrop blur for a solid look
+    <div className="h-16 md:h-20 bg-blue-50 border-b border-blue-100 flex items-center justify-between px-4 md:px-6 sticky top-0 z-20 shadow-sm">
       <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-full bg-blue-500 text-white flex items-center justify-center font-semibold">
-          {title?.charAt(0) || "U"}
+        {/* Mobile Back Button - Update hover color to match blue theme */}
+        <button
+          onClick={() => window.history.back()}
+          className="md:hidden btn btn-ghost btn-circle btn-sm text-blue-800 hover:bg-blue-100"
+        >
+          <ChevronLeft size={24} />
+        </button>
+
+        {/* Avatar - Use blue shade for the background */}
+        <div className="relative">
+          <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-lg shadow-inner">
+            {title?.charAt(0).toUpperCase() || "U"}
+          </div>
+          {conversation.type === "private" && (
+            <div
+              className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-blue-50 ${isOnline ? "bg-success" : "bg-base-300"}`}
+            />
+          )}
         </div>
 
         <div>
           <div className="flex items-center gap-2">
-            <span className="font-semibold">{title?.toUpperCase()}</span>
-
+            {/* Update text color to a darker blue for contrast */}
+            <h3 className="font-bold text-base md:text-lg leading-tight truncate max-w-[150px] md:max-w-xs text-blue-950">
+              {title}
+            </h3>
             {groupLabel && (
-              <span className="text-xs px-2 py-0.5 rounded bg-gray-200 text-gray-600">
+              // Update badge to match the new color scheme
+              <span className="badge badge-info badge-sm font-medium text-black">
                 {groupLabel}
               </span>
             )}
           </div>
 
-          <div className="text-sm">
+          <div className="text-xs md:text-sm">
             {users.length > 0 ? (
-              <span className="text-blue-500">
-                {users.join(", ")} typing...
+              // Keep typing status blue, matches the theme
+              <span className="text-blue-600 font-medium animate-pulse">
+                typing...
               </span>
             ) : conversation.type === "private" ? (
-              isOnline ? (
-                <span className="text-green-500">Online</span>
-              ) : (
-                <span className="text-gray-400">Offline</span>
-              )
-            ) : null}
+              <span
+                className={
+                  isOnline ? "text-success font-medium" : "text-blue-950/40"
+                }
+              >
+                {isOnline ? "Active now" : "Offline"}
+              </span>
+            ) : (
+              <span className="text-blue-950/40">Group conversation</span>
+            )}
           </div>
         </div>
       </div>
 
-      {/* MENU BUTTON */}
-      <div className="flex items-center gap-2 relative">
+      {/* ACTION BUTTONS */}
+      <div className="flex items-center gap-1 md:gap-3">
         {conversation.type === "free-group" && (
           <InviteLinkButton conversationId={conversationId}>
-            <Share2 className="w-5 h-5 text-gray-600 hover:text-black cursor-pointer" />
+            <button
+              className="btn btn-ghost btn-circle btn-sm text-blue-600 hover:bg-blue-100"
+              title="Invite"
+            >
+              <Share2 size={20} />
+            </button>
           </InviteLinkButton>
         )}
-        {/* MEMBERS BUTTON (ONLY PRIVATE GROUP) */}
+
         {conversation.type === "private-group" && (
-          <Users
+          <button
             onClick={() => setShowMembersModal(true)}
-            className="cursor-pointer text-gray-600 hover:text-black mr-2"
-          />
+            className="btn btn-ghost btn-circle btn-sm text-blue-600 hover:bg-blue-100"
+            title="View Members"
+          >
+            <Users size={20} />
+          </button>
         )}
 
-        <MoreVertical
-          onClick={() => setShowMenu((prev) => !prev)}
-          className="cursor-pointer text-gray-600 hover:text-black"
-        />
+        {/* Menu Dropdown - Vertical More sign */}
+        <div className="relative">
+          <button
+            onClick={() => setShowMenu((prev) => !prev)}
+            className={`btn btn-ghost btn-circle btn-sm text-blue-600 hover:bg-blue-100 ${showMenu ? "btn-active bg-blue-100" : ""}`}
+          >
+            <MoreVertical size={20} />
+          </button>
 
-        {/* DROPDOWN */}
-        {showMenu && (
-          <ChatOptionsMenu
-            conversation={conversation}
-            onClose={() => setShowMenu(false)}
-            onAddMember={handleAddMember}
-            onLeave={handleLeaveAndDelete}
-            onBlock={handleBlock}
-            onUnblock={handleUnblock}
-            onRemoveMember={handleRemoveMember}
-            onDeleteGroup={handleLeaveAndDelete}
-          />
-        )}
-
-        {activeModal === "add" && (
-          <AddMemberModal
-            conversationId={conversationId}
-            onClose={() => setActiveModal(null)}
-          />
-        )}
-
-        {activeModal === "remove" && (
-          <RemoveMemberModal
-            conversationId={conversationId}
-            onClose={() => setActiveModal(null)}
-          />
-        )}
-
-        {showMembersModal && (
-          <MembersModal
-            conversationId={conversationId}
-            onClose={() => setShowMembersModal(false)}
-          />
-        )}
+          {showMenu && (
+            <div className="absolute right-0 mt-2 z-[50]">
+              <ChatOptionsMenu
+                conversation={conversation}
+                onClose={() => setShowMenu(false)}
+                onAddMember={handleAddMember}
+                onLeave={handleLeaveAndDelete}
+                onBlock={handleBlock}
+                onUnblock={handleUnblock}
+                onRemoveMember={handleRemoveMember}
+                onDeleteGroup={handleLeaveAndDelete}
+              />
+            </div>
+          )}
+        </div>
       </div>
+
+      {/* MODALS - Remain unchanged */}
+      {activeModal === "add" && (
+        <AddMemberModal
+          conversationId={conversationId}
+          onClose={() => setActiveModal(null)}
+        />
+      )}
+      {activeModal === "remove" && (
+        <RemoveMemberModal
+          conversationId={conversationId}
+          onClose={() => setActiveModal(null)}
+        />
+      )}
+      {showMembersModal && (
+        <MembersModal
+          conversationId={conversationId}
+          onClose={() => setShowMembersModal(false)}
+        />
+      )}
     </div>
   );
 }

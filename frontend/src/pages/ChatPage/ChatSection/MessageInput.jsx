@@ -1,7 +1,6 @@
 // Bottom input area.
 // User types message, attaches media, sends message (via socket/API).
 import React from "react";
-import { Send } from "lucide-react";
 import { useState, useEffect } from "react";
 import { getSocket } from "../../../socket/socket";
 import {
@@ -12,7 +11,15 @@ import {
 import { setTyping, clearTyping } from "../../../store/chatSlice";
 import { useDispatch, useSelector } from "react-redux";
 import { v4 as uuid } from "uuid";
-
+import {
+  Send,
+  Plus,
+  Image as ImageIcon,
+  Mic,
+  Camera,
+  Smile,
+  Paperclip,
+} from "lucide-react";
 export default function MessageInput({ selectedConversation }) {
   const [message, setMessage] = useState("");
   const dispatch = useDispatch();
@@ -114,29 +121,77 @@ export default function MessageInput({ selectedConversation }) {
     }, 3000);
   };
 
-  return (
-    <>
-      <div className="h-20 bg-white border-t flex items-center px-6 gap-4">
-        <input
-          type="text"
-          value={message}
-          onChange={(e) => {
-            const value = e.target.value;
-            setMessage(value);
-            handleTyping(value);
-          }}
-          placeholder="Type a message..."
-          className="flex-1 bg-gray-100 px-4 py-3 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-400"
-          onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-        />
+  const onKeyDown = (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  };
 
-        <button
-          onClick={sendMessage}
-          className="bg-blue-500 hover:bg-blue-600 transition p-3 rounded-full text-white"
-        >
-          <Send size={18} />
-        </button>
+  return (
+    <div className="bg-base-100 border-t border-base-200 px-4 py-3 shadow-[0_-4px_10px_rgba(0,0,0,0.05)]">
+      <div className="max-w-7xl mx-auto flex items-center gap-2">
+        {/* LEFT ACTIONS */}
+        <div className="flex items-center gap-1">
+          <button className="btn btn-circle btn-sm bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-100">
+            <Plus size={20} />
+          </button>
+
+          <button className="btn btn-circle btn-sm bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-100 hidden sm:flex">
+            <Camera size={18} />
+          </button>
+
+          <button className="btn btn-circle btn-sm bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-100 hidden sm:flex">
+            <ImageIcon size={18} />
+          </button>
+
+          <button className="btn btn-circle btn-sm bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-100 hidden sm:flex">
+            <Paperclip size={18} />
+          </button>
+        </div>
+
+        {/* INPUT */}
+        <div className="flex-1 flex items-center bg-base-200 rounded-full px-3 border border-base-300 focus-within:border-blue-400 transition">
+          <textarea
+            rows={1}
+            value={message}
+            onChange={(e) => {
+              const value = e.target.value;
+              setMessage(value);
+              handleTyping(value);
+            }}
+            onKeyDown={onKeyDown}
+            placeholder="Type your message..."
+            className="flex-1 bg-transparent outline-none resize-none py-2 text-base-content"
+          />
+
+          <button className="text-blue-500 hover:text-blue-600 px-2">
+            <Smile size={18} />
+          </button>
+        </div>
+
+        {/* RIGHT ACTIONS (SAME ROW FIXED) */}
+        <div className="flex items-center gap-1">
+          {!message.trim() ? (
+            <button className="btn btn-circle btn-sm bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-100">
+              <Mic size={18} />
+            </button>
+          ) : (
+            <button
+              onClick={sendMessage}
+              className="btn btn-circle btn-sm bg-blue-600 text-white hover:bg-blue-700 shadow-md"
+            >
+              <Send size={16} />
+            </button>
+          )}
+        </div>
       </div>
-    </>
+      <div className="text-center mt-2">
+        <div className="inline-flex items-center gap-1 text-[10px] uppercase tracking-widest text-blue-500/80 animate-float">
+          <span className="w-1.5 h-1.5 bg-blue-700 rounded-full animate-ping"></span>
+          Secure Chat with FarmBazaar
+        </div>
+      </div>
+    </div>
   );
 }

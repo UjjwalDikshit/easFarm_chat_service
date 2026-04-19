@@ -14,7 +14,8 @@ export default function JoinConversationModal({ onClose, onSubmit }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/30 flex items-center justify-center">
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[9999]">
+   
       <div className="bg-white p-6 rounded shadow w-[320px]">
         <h2 className="text-lg font-semibold mb-4">
           Join via Invite
@@ -31,7 +32,7 @@ export default function JoinConversationModal({ onClose, onSubmit }) {
           <button onClick={onClose}>Cancel</button>
 
           <button
-            className="bg-green-500 text-white px-3 py-1 rounded"
+            className="bg-blue-500 text-white px-3 py-1 rounded"
             onClick={handleJoin}
           >
             Join

@@ -19,7 +19,7 @@ export const handleCreateConversation = async ({
 
   /*
   ==========================
-  🚨 VALIDATION
+   VALIDATION
   ==========================
   */
 
@@ -58,12 +58,12 @@ export const handleCreateConversation = async ({
       setSelectedConversation(existingConv._id);
       setShowModal(false);
 
-      return; // 🚫 STOP HERE (NO API CALL)
+      return; //  STOP HERE (NO API CALL)
     }
   }
   /*
   ==========================
-  1️⃣ OPTIMISTIC ADD
+  1️ OPTIMISTIC ADD
   ==========================
   */
 
@@ -82,13 +82,13 @@ export const handleCreateConversation = async ({
       lastMessageAt: new Date().toISOString(),
 
       unreadCount: 0,
-      role: "admin", // ✅ add this
+      role: "admin", //  add this
     }),
   );
 
   /*
   ==========================
-  2️⃣ OPEN TEMP CHAT
+  2️OPEN TEMP CHAT
   ==========================
   */
 
@@ -98,7 +98,7 @@ export const handleCreateConversation = async ({
   try {
     /*
     ==========================
-    3️⃣ API CALL
+    3️ API CALL
     ==========================
     */
 
@@ -108,7 +108,7 @@ export const handleCreateConversation = async ({
 
     /*
     ==========================
-    4️⃣ REPLACE TEMP
+    4️ REPLACE TEMP
     ==========================
     */
 
@@ -121,7 +121,7 @@ export const handleCreateConversation = async ({
 
     /*
     ==========================
-    5️⃣ JOIN SOCKET
+    5️ JOIN SOCKET
     ==========================
     */
 
@@ -132,7 +132,7 @@ export const handleCreateConversation = async ({
     }
     /*
     ==========================
-    6️⃣ OPEN REAL CHAT
+    6️ OPEN REAL CHAT
     ==========================
     */
 
@@ -142,7 +142,7 @@ export const handleCreateConversation = async ({
 
     /*
     ==========================
-    ❌ ROLLBACK
+     ROLLBACK
     ==========================
     */
 
